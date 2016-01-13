@@ -1,0 +1,15 @@
+﻿@{
+    if (ViewData["ModelName"] == null)
+    {
+        ViewData["ModelName"] = ViewData["Id"];
+    }
+}
+
+<div class="form-group">
+    <label for="@ViewData["Id"]" class="control-label col-xs-4">@ViewData["Label"]</label>
+    <div class="col-xs-8">
+        @*Default values are preset in controllers!*@
+        <input id="@ViewData["Id"]" type="text" class="form-control" ng-model="@ViewData["ModelName"]"
+               placeholder="1" style="width: 45px;">
+    </div>
+</div>

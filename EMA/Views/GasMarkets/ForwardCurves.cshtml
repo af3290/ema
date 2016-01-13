@@ -1,0 +1,62 @@
+﻿@using MarketModels;
+@using EMA.Helpers
+@{
+    ViewBag.Title = "Gas Forward Curves";
+    //could be even better..
+}
+
+<script src="~/Scripts/App/gasForwards.js"></script>
+
+<div ng-controller="GasForwardCurvesController">
+    <div class="row">
+        <div class="col-md-4">
+            <h2>Gas Forward Curves</h2>
+            <p>
+                All forward curves from NYMEX, showing also from point in time and simulations...
+            </p>
+            <h2>Parameters</h2>
+            <form class="form-horizontal">
+                <div class="form-group">
+                    <label for="date-time-picker" class="control-label col-xs-4">Date</label>
+                    <div class="col-xs-8">
+                        @{Html.RenderPartial("~/Views/Components/DateTimePicker.cshtml", null, new ViewDataDictionary(){
+                            { "Id", "date-picker" }, { "ModelName", "date" },
+                            { "MinDate", new DateTime(2012,1,1) } });}
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="" class="control-label col-xs-4">Number of simulations (%)</label>
+                    <div class="col-xs-8">
+                        <input type="text" class="form-control" ng-model="sensitivityChangePercentage"
+                               placeholder="1" style="width: 45px;">
+                    </div>
+                </div>
+                @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                        { "Id", "numberSimulations" }, { "Label", "Number of simulations" } });}
+                @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                        { "Id", "numberSimulations" }, { "Label", "Number of simulations" } });}
+                
+                <div class="form-group">
+                    <label for="" class="control-label col-xs-4">Simulations (%)</label>
+                    <div class="col-xs-8">
+                        <button type="button" class="btn btn-default" ng-click="simulate()">Simulate path</button> <br />
+                        <button type="button" class="btn btn-default" ng-click="clear()">Clear</button><br /><br />
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-8">
+            <h2>Futures Prices</h2>
+            <div id="container" style="height: 400px; min-width: 310px"></div>
+            <h2>Current Curve</h2>
+            <div id="container-current" style="height: 400px; min-width: 310px"></div>
+            <h2>Statistics</h2>
+            Now show some stuff about PCA:
+            explained %, then
+            vaiability...
+            PCA coefficients...
+            maybe other method of...
+            factor weights... also insertable by hand... and estimated... YEAHuuuuhuhuh...
+        </div>
+    </div>
+</div>

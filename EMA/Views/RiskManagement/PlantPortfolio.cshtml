@@ -1,0 +1,42 @@
+﻿@using MarketModels;
+@using EMA.Helpers
+@{
+    ViewBag.Title = "Plant Portfolio";
+
+}
+
+<script src="~/Scripts/App/plantPortfolio.js"></script>
+
+<div ng-controller="PlantPortfolioController">
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Gas Storage Valuation</h2>
+            <p>
+                A simple intrinsic valuation model based on real UK data.
+            </p>
+            <h3>Parameters</h3>
+            <form class="form-horizontal">
+                <div class="form-group">
+                    <label for="date-time-picker" class="control-label col-xs-4">Date</label>
+                    <div class="col-xs-8">
+                        @{Html.RenderPartial("~/Views/Components/DateTimePicker.cshtml", null, new ViewDataDictionary(){
+                                        { "Id", "date-picker" }, { "ModelName", "date" },
+                                        { "MinDate", new DateTime(2012,1,1) } });}
+                    </div>
+                </div>
+                @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                        { "Id", "rate" }, { "Label", "Heat Rate (%)" } });}
+                @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                        { "Id", "spread" }, { "Label", "XXX (%)" } });}
+            </form>
+        </div>
+        <div class="col-md-6">
+            <h2>Result</h2>
+            <div id="container-1" style="height: 400px; min-width: 310px"></div>
+            <div id="container-var" style="height: 400px; min-width: 310px"></div>
+        </div>
+    </div>
+    <div class="row">
+
+    </div>
+</div>

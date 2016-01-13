@@ -1,0 +1,65 @@
+﻿<h2>Summary</h2>
+<h3>Residuals</h3>
+Bias <span style="color:{{Bias > 25 ? "red":""}}">{{Bias | number: 2}}</span><br />
+<table>
+    <thead>
+        <tr>
+            <td></td>
+            <td>pValue</td>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Independent</td>
+            <td style="color:{{Bias > 25 ? "red":""}}"
+                data-toggle="tooltip" 
+                title="Whether residuals are independent based on autocorrelation">
+                {{ MAPE[1] | number: 2}}%
+            </td>
+        </tr>
+        <tr>
+            <td>Normal</td>
+            <td style="color:{{Bias > 25 ? "red":""}}"
+                data-toggle="tooltip" 
+                title="Whether residuals are normally distributed (or according test)">
+                {{ MAPE[1] | number: 2}}%
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table>
+    <thead>
+        <tr>
+            <td></td>
+            <td>Min</td>
+            <td>Avg</td>
+            <td>Max</td>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Peak</td>
+            <td>
+                {{ MAPE[1] | number: 2}}%
+            </td>
+        </tr>
+        <tr>
+            <td>Offpeak</td>
+            <td>
+                {{ MAPE[1] | number: 2}}%
+            </td>
+        </tr>
+        <tr>
+            <td>MAPE</td>
+            <td>{{ MAPE[0] | number: 2}}%</td>
+            <td>{{ MAPE[1] | number: 2}}%</td>
+            <td>{{ MAPE[2] | number: 2}}%</td>
+        </tr>
+        <tr>
+            <td>MSE</td>
+            <td>{{ MRE[0] | number: 2}} {{Currency}}</td>
+            <td>{{ MRE[1] | number: 2}} {{Currency}}</td>
+            <td>{{ MRE[2] | number: 2}} {{Currency}}</td>
+        </tr>
+    </tbody>
+</table>

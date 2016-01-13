@@ -1,0 +1,14 @@
+packages/
+EMA/bin/
+EMA/obj/
+MarketModels/bin
+MarketModels/obj
+MarketModels.Tests/bin
+MarketModels.Tests/obj
+Utils/bin
+Utils/obj
+Utils.UnitTests/bin/
+Utils.UnitTests/obj/
+EMA.UnitTests/bin/
+EMA.UnitTests/obj/
+.vs/

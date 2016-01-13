@@ -1,0 +1,15 @@
+﻿<div class="dropdown" style="margin: 0px 0px 0px 0px;">
+    <button class="btn btn-default dropdown-toggle" type="button" id="@ViewData["Id"]" data-toggle="dropdown">
+        {{@ViewData["SelectedValue"]}}
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu" role="menu" aria-labelledby="@ViewData["Id"]">
+        <li ng-repeat="li in @ViewData["ModelName"]" role="presentation">
+            <a role="menuitem" tabindex="-1" href="#" ng-click="changeDropDownValue('@ViewData["SelectedValue"]', li)"
+               data-toggle="tooltip" data-placement="right">
+                {{li}}
+            </a>
+        </li>
+    </ul>
+</div>
+

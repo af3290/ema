@@ -1,0 +1,12 @@
+﻿@*Checkbox or radio buttons... awesome*@
+
+<link href="http://awesome-bootstrap-checkbox.okendoken.com/demo/build.css" rel="stylesheet">
+
+<div ng-repeat="selectionValue in @ViewData["ModelName"]" class="checkbox checkbox-primary">
+    <input id="@ViewData["Id"]-checkbox-{{selectionValue}}" 
+           type="checkbox" checked="" 
+           ng-model="@(ViewData["SelectedValues"])[selectionValue]">
+    <label for="@ViewData["Id"]-checkbox-{{selectionValue}}">
+        {{selectionValue}}
+    </label>
+</div>

@@ -1,0 +1,33 @@
+﻿@{
+    ViewBag.Title = "Forward Market";
+}
+
+<script src="~/Scripts/index.js"></script>
+<script src="~/Scripts/spot.js"></script>
+
+<div ng-controller="SpotController">
+    <div class="row">
+        <div class="col-md-4">
+            <h2>Forward Interpolation</h2>
+            <p>We note here how our AMAZING forward curve is interpolated starting from the forward contracts.</p>
+            <p><a class="btn btn-default" href="http://go.microsoft.com/fwlink/?LinkId=301866">Algorithm &raquo;</a></p>
+        </div>
+        <div class="col-md-8">
+            <h2>Interpolation</h2>
+            <p>here follows a graph...also how arbitrages... yes!</p>
+
+            <div id="container" style="height: 400px; min-width: 310px"></div>
+
+            <button type="button" class="btn btn-default" ng-click="simulate()">Simulate path</button>
+            <button type="button" class="btn btn-default" ng-click="clear()">Clear</button><br /><br />
+            Chart Properties<br />
+            <input type="text" ng-model="nbSims" placeholder="Simulations"><br />
+            <input type="text" ng-model="confidence" placeholder="Confidence"><br /><br />
+            Model Properties<br />
+            <input type="text" ng-model="volatility" placeholder="Volatility"><br />
+            <input type="text" ng-model="reversionRate" placeholder="Reversion Rate"><br />
+
+        </div>
+    </div>
+
+</div>

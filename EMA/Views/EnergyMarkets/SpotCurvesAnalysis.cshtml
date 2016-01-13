@@ -1,0 +1,240 @@
+﻿@using MarketModels;
+@using EMA.Helpers
+@{
+    ViewBag.Title = "Spot Market";
+}
+
+<script>
+    SERVER_CONSTANTS = {
+        EAs: @(Html.EnumTypeToJavascript<Types.EquilibriumAlgorithm>()),
+        EFs: @(Html.EnumTypeToJavascript<Types.EquilibriumFill>())
+    };
+</script>
+
+<script src="~/Scripts/sensitivityAnalysis.js"></script>
+
+<div ng-controller="SensitivityAnalysisController">
+    <div class="row">
+        <div class="col-md-4">
+            <h2>Spot Curves</h2>
+            <p>Some graphs that show the intraday supply and demand curves for all 24 hours. 
+               Notice here is the equilibrium setting mechanism which is based on a couple of different
+               approaches the with various options (some of which are only used for demonstration purposes, 
+               in practice they would never be used) <a data-toggle="modal" data-target="#demoDescription">Description</a>
+            </p>
+            <h2>Parameters</h2>
+            <form class="form-horizontal">
+                <div class="form-group">
+                    <label for="date-time-picker" class="control-label col-xs-4">Date</label>
+                    <div class="col-xs-8">
+                        @{Html.RenderPartial("~/Views/Components/DateTimePicker.cshtml", null, new ViewDataDictionary(){
+                            { "Id", "date-picker" }, { "ModelName", "date" },
+                            { "MinDate", new DateTime(2012,1,1) } });}
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="sensitivityPercentage" class="control-label col-xs-4">Sensitivity Deviation (%)</label>
+                    <div class="col-xs-8">
+                        <input type="text" class="form-control" ng-model="sensitivityChangePercentage"
+                               placeholder="1" style="width: 45px;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="inputPassword" class="control-label col-xs-4">Equilibrium Algorithm</label>
+                    <div class="col-xs-8">
+                        @{Html.RenderPartial("~/Views/Components/DropDownList.cshtml", null, new ViewDataDictionary(){
+                              { "Id", "menu-ea" } , { "ModelName", "EAs" }, { "SelectedValue", "EquilibriumAlgorithm" } });}
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="inputPassword" class="control-label col-xs-4">Equilibrium Fill</label>
+                    <div class="col-xs-8">
+                        @{Html.RenderPartial("~/Views/Components/DropDownList.cshtml", null, new ViewDataDictionary(){
+                              { "Id", "menu-ef" } , { "ModelName", "EFs" }, { "SelectedValue", "EquilibriumFill" } });}
+                    </div>
+                </div>
+            </form> 
+        </div>
+        <div class="col-md-8">
+            <h2>Result</h2>
+            <ul class="nav nav-tabs">
+                <li class="active"><a href="#3dcurves-tab" data-toggle="tab">Curves in a 3D Surface<i class="fa"></i></a></li>
+                <li><a href="#hours-tab" data-toggle="tab">Curves for each hour <i class="fa"></i></a></li>
+                <li><a href="#profile-tab" data-toggle="tab" ng-click="loadProfilePrices()">Profile of all hours <i class="fa"></i></a></li>
+            </ul>
+            <div class="tab-content">
+                <div id="3dcurves-tab" class="tab-pane active">
+                    <iframe id="MarketCurvesFrame" src="{{CurvesIframeUrl}}" style="width: 100%; height: 480px; border: 0;" frameBorder="0"></iframe>
+                </div>
+                <div id="hours-tab" class="tab-pane">
+                    <div class="dropdown" style="margin: 10px 0px 0px 0px;">
+                        <button class="btn btn-default dropdown-toggle" type="button" id="menu-hour" data-toggle="dropdown">
+                            {{selectedHour}}
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" role="menu" aria-labelledby="menu-hour">
+                            <li ng-repeat="marketCurves in MarketCurves" role="presentation">
+                                <a role="menuitem" tabindex="-1" href="#"
+                                   ng-click="loadHourCurvesChart(marketCurves.Hour)">
+                                    {{ marketCurves.Hour }}
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div id="hour-chart"></div>
+                </div>
+                <div id="profile-tab" class="tab-pane">
+                    <div id="profile-chart"></div>
+                </div>
+                <div>
+                    <table id="sensitivity-table" class="table table-striped table-hover"
+                           style="font-size: 13px; text-align: center;">
+                        <thead>
+                            <tr>
+                                <td></td>
+                                <td colspan="2">Equilibrium</td>
+                                <td></td>
+                                <td colspan="4">Price Change Δ (EUR)</td>
+                            </tr>
+                            <tr>
+                                <td rowspan="2" colspan="1">Hour</td>
+                                <td rowspan="2" colspan="1">Price<br />(EUR)</td>
+                                <td rowspan="2" colspan="1">Volume<br />(MWh)</td>
+                                <td rowspan="2" colspan="1">Fuel</td>
+                                <td rowspan="1" colspan="2">Supply</td>
+                                <td rowspan="1" colspan="2">Demand</td>
+                            </tr>
+                            <tr>
+                                <td>- {{sensitivityChangePercentage}}%</td>
+                                <td>+ {{sensitivityChangePercentage}}%</td>
+                                <td>- {{sensitivityChangePercentage}}%</td>
+                                <td>+ {{sensitivityChangePercentage}}%</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="marketCurves in MarketCurves">
+                                <td>{{marketCurves.Hour}}</td>
+                                <td>{{marketCurves.Equilibrium.Price | number: 2}}</td>
+                                <td>{{marketCurves.Equilibrium.Volume | number: 0}}</td>
+                                <td @*style="background: url(http://driftsdata.statnett.no/Web/content/images/table_icons.png) no-repeat 5px {{marketCurves.FuelIconTopPosition}}px;"*@>
+                                    {{marketCurves.Fuel}}
+                                </td>
+                                <td>{{marketCurves.Sensitivity.PriceDeltaSupplyMinusPrc | number: 2}}</td>
+                                <td>{{marketCurves.Sensitivity.PriceDeltaSupplyPlusPrc | number: 2}}</td>
+                                <td>{{marketCurves.Sensitivity.PriceDeltaDemandMinusPrc | number: 2}}</td>
+                                <td>{{marketCurves.Sensitivity.PriceDeltaDemandPlusPrc | number: 2}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="demoDescription" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h3 class="modal-title" id="myModalLabel">Demo Description</h3>
+            </div>
+            <div class="modal-body">
+                <p>
+                    The spot maket is formed by ordes arranged in an aggregate demand and an aggregate supply curve,
+                    which are strictly increasing and, respectivelly, strictly decreasing.
+                    The market can be formulated as follows:
+                </p>
+                <div class="tex2jax_process" style="">
+                    $$ \text{D = }\{\{\text{P}_i, \text{Q}_i\} \mid \text{P}_i < \text{P}_{i-1},\ \text{Q}_i > \text{Q}_{i-1},\ i \text{ = 1,..., N}_D\}$$
+                    $$ \text{Where N}_D\text{ is the number of demand orders } $$
+                    $$ \text{S = }\{\{\text{P}_i, \text{Q}_i\} \mid \text{P}_i > \text{P}_{i-1},\ \text{Q}_i > \text{Q}_{i-1},\ i \text{ = 1,..., N}_S\}$$
+                    $$ \text{Where N}_S\text{ is the number of supply orders } $$
+                </div>
+                <p>
+                    Equilibrium in the spot market can be found by either of the following methods,
+                    while the former is more geometric based, the latter is the actual approach used in practice
+                </p>
+
+                <h3>1. Curve Intersection</h3>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p>
+                            Line intersection is commonly used in microeconomics, but here curves intersection made by a sets of lines 
+                            (1000s of data points) requires a more advanced line intersection algorithm, which successively zooms into the intersection 
+                            point by finding the minimum distances between points.
+                        </p>
+                    </div>
+                    <div class="col-md-8">
+                        <img src="~/Content/Images/curvesIntersection.png" style="width: 480px;" />
+                    </div>
+                </div>
+                <div class="tex2jax_process" style="">
+                    $$ \text{X = } \{\text{ x = {i, j, distance(s, d)}}\mid (\forall s \in S)(\forall d \in D),\text{i = index(s), j = index(d)}\} \ $$
+                    $$ \text{min = Minimum(X)} \ $$
+                    $$ \text{subMin = Minimum (X-}\{\text{min}\}) \ $$
+                    $$ \text{Equilibrium = } \{\text{S[min.i], S[min.i+1]}\}\cap\{\text{D[subMin.j], D[subMin.j+1]}\}  $$
+                </div>
+
+                <h3>2. Welfare Maximization</h3>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p>
+                            Maximizes the green shaded area (as shown in the picture to the right), which forms the total
+                            surplus (producer's surplus and consumer's surplus). In onther words, the total traded volume is
+                            to be maximized, as it will benefit both sides of all deals involved, it can also be interpreted as
+                            the highest turnover for a given day.
+                        </p>
+                        <p> The solution is based on the following linear programming problem:</p>
+                    </div>
+                    <div class="col-md-8">
+                        <img src="~/Content/Images/welfareMaximization.png" style="width: 480px;" />
+                    </div>
+                </div>
+                <div class="tex2jax_process" style="">
+                    $$ \text{Equilibrium = } \{\text{P}_i,\text{Q}_i\} \text{ where i = first(}\text{d}_i==0) \ or \text{ i = first(}\text{s}_i==0) $$
+                    $$ \text{maximize } \quad \sum_{i=1}^{N_D} D^P_i d_i - \sum_{i=1}^{N_S} S^P_i s_i $$
+                    $$ \text{subject to} \quad\sum_{i=1}^{N_D} d_i - \sum_{i=1}^{N_S} s_i = 0 $$
+                    $$ 0 \leq d_i \leq D^Q_i, \quad i=1,..,N_D $$
+                    $$ 0 \leq s_i \leq S^Q_i, \quad i=1,..,N_S $$
+                    $$ \text{d}_i \text{ - optimized demand quantity } $$
+                    $$ \text{s}_i \text{ - optimized supply quantity } $$
+                    $$ \text{D}^P_i \text{ - demand order price } $$
+                    $$ \text{S}^P_i \text{ - supply order price} $$
+                    $$ \text{D}^Q_i \text{ - demand order quantity } $$
+                    $$ \text{S}^Q_i \text{ - supply order quantity } $$
+                </div>
+                <hr />
+
+                <h3>Sensitivities</h3>
+                <p>
+                    Of significant importance in microeconomics is to find price sensitivities, in this case the demand is a
+                    very inelastic variable, while the supply is more elastic. Those values are found either throw line intersection
+                    slopes or through linear programming sensitivities. The can be defined as follows:
+                </p>
+                <div class="tex2jax_process" style="">
+                    $$ \text{E}_q = \frac{\text{P}_i - \text{P}_{i-1}}{\text{Q}_i - \text{Q}_{i-1}}  $$
+                    $$ \text{E}_q \text{ - elasticity of quantity }  $$
+                    $$ \text{i} \text{ - the equilibrium index}  $$
+                    $$ \text{Sensitivity}_{q}(Q_i\pm\text{x%}) =  \text{E}_{q}*\pm\text{x%} $$
+                    $$ x \ \text{ - the required % change in quantity}  $$
+                </div>
+                <hr />
+                <h3>Limitations</h3>
+                1. no areas (area curves are not freely available) <br />
+                2. no complex orders (just aggregated data interpreted as simple single order) <br />
+                3. no transmission constraints (that could arise due to grid problems) <br />
+                <hr />
+
+                <h3>References</h3>
+                JM Morales, A Conejo, H Madsen, P Pinson, M Zugno (2014). Integration Renewables in Electricity Markets: Operational Problems. Springer
+                <br />
+                Bradley, S. P., A. C. Hax, and T. L. Magnanti. Applied Mathematical Programming. Addison-Wesley, 1977. ISBN: 9780201004649.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
