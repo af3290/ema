@@ -57,6 +57,10 @@ namespace Utils.UnitTests
             path = nd.DownloadFile(DataItem.Elspot_Prices, Resolution.Hourly, FromYear(2014), Currency.EUR);
             path = nd.DownloadFile(DataItem.Elspot_Prices, Resolution.Hourly, FromYear(2015), Currency.EUR);
             */
+
+            path = nd.DownloadFile(DataItem.Elspot_Capacities, Resolution.Hourly, FromYear(2013), Currency.EUR);
+            path = nd.DownloadFile(DataItem.Elspot_Capacities, Resolution.Hourly, FromYear(2014), Currency.EUR);
+            path = nd.DownloadFile(DataItem.Elspot_Capacities, Resolution.Hourly, FromYear(2015), Currency.EUR);
         }
 
         [TestMethod]

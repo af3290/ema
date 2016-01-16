@@ -41,25 +41,33 @@ module Forecast =
 
         res
 
+    ///Shorthand version from given
+    let RMSE (forecasted : float[]) (realized : float[]) : float = 
+        let residuals = realized -- forecasted
+        let sqErrs = residuals ^^ 2.0
+
+        sqrt(sqErrs|>Array.average)
+
     type FitStatistics = {
         Bias : float  //mean error
         R : float
         IndependencePValue: float
         NormalityPValue: float
         //min, avg, max
+        //avg values are RMSQ and MAPE...
         RSE : float[]
         APE : float[]
-        MAPE : float
-        RMSE : float
     }
 
+    ///Calculates are relevant forecast fitting statistics: absolute errors, % errors, residual IID tests
+    ///and R square...
     let ForecastFit (forecasted : float[]) (realized : float[]) : FitStatistics =
         let residuals = realized -- forecasted
         let ressd = Statistics.StandardDeviation residuals
         let resm = Statistics.Mean residuals
 
         let prcErrs = residuals./realized
-        let sqErrs = residuals ^^ 2.0 |> Array.map sqrt
+        let sqErrs = residuals ^^ 2.0
         
         let mutable normalityPValue = 0.0
         
@@ -85,9 +93,7 @@ module Forecast =
             IndependencePValue = autocorr |> Array.max;
             NormalityPValue = normalityPValue;
             APE = [| prcErrs|>Array.min; prcErrs|>Array.average; prcErrs|>Array.max |];
-            RSE = [| sqErrs|>Array.min; sqErrs|>Array.average; sqErrs|>Array.max |];
-            MAPE = Array.sum prcErrs / (float)prcErrs.Length
-            RMSE = sqrt(Array.sum sqErrs / (float)sqErrs.Length) 
+            RSE = [| sqrt(sqErrs|>Array.min); sqrt(sqErrs|>Array.average); sqrt(sqErrs|>Array.max) |];
         }
 
         res

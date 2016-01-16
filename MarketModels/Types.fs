@@ -9,7 +9,7 @@ module Types =
 
     type SettlementMethod = PayAsBid | UniformPricing
 
-    type ForecastMethod = Naive | AR | ARX | ARwGARCH  
+    type ForecastMethod = Naive | HWT | AR | ARX | ARwGARCH | ARXwGARCH 
 
     type Resolution = Yearly | Quarterly | Monthly | Weekly | Daily | Hourly
 

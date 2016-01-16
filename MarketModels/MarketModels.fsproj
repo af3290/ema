@@ -65,6 +65,7 @@
     <Compile Include="GasValuation.fs" />
     <Compile Include="Preprocess.fs" />
     <Compile Include="TimeSeries.fs" />
+    <Compile Include="HoltWinters.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="alglibnet2">
