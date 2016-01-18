@@ -2,6 +2,8 @@
     //abstract charts to a projects called .WebUtils... all forecasting and graphs must be there...
     //and maybe used as components... GREAT IDEA!
 
+    $scope.extendWith = extendWith;
+
     $scope.date = new Date(2015, 7, 3); //js months start at 0..
     angular.extend($scope, SERVER_CONSTANTS);
     $scope.forecastMethod = $scope.ForecastMethods[0];
@@ -49,30 +51,55 @@
             name: "Forecast ",
             color: "#FF0000",
             dashStyle: "ShortDot",
-            data: data
+            data: data,
+            zIndex: 9
         };
 
         chart.addSeries(serie);
 
         var confidences = dataObj.Result.Confidence;
-
+        var confidenceBand = [];
+        //add confidence values...
         for (var i = 0; i < confidences.length; i++) {
             var confidenceSerie = confidences[i];
             var confidenceValues = [];
+            //first upper, then lower
             for (var j = 0; j < confidenceSerie.length; j++) {
-                confidenceValues[j] = [dt + (j + 2) * 3600000, confidenceSerie[j]];
+                var dVal = dt + (j + 2) * 3600000;
+                var cVal = confidenceSerie[j];
+                confidenceValues[j] = [dVal, cVal];
+                
+                if (confidenceBand[j] == undefined)
+                    confidenceBand[j] = [dVal, 0, cVal]
+                else
+                    confidenceBand[j][1] = cVal;
             }
 
             var serie = {
                 name: "Confidence " + ((i === 0) ? "Upper" : "Lower"),
                 color: "#FF0000",
-                type: 'spline',
+                type: 'line',
                 dashStyle: "Solid",
-                data: confidenceValues
+                data: confidenceValues,
+                zIndex: 9
             };
 
             chart.addSeries(serie);
         }
+
+        //add confidence band area
+        var cofidenceBandArea = {
+            name: 'ConfidenceBand',
+            data: confidenceBand,
+            type: 'arearange',
+            lineWidth: 0,
+            linkedTo: ':previous',
+            color: '#FF0000',
+            fillOpacity: 0.6,
+            zIndex: 1
+        };
+
+        chart.addSeries(cofidenceBandArea);
 
         var thisDate = new Date($scope.date);
         thisDate.setTime(thisDate.getTime() + (2 * 60 * 60 * 1000)); //UTC bullshit?...
@@ -82,7 +109,9 @@
         //rangeEndDate.setTime(rangeEndDate.getTime() + (2 * 60 * 60 * 1000));
         chart.xAxis[0].setExtremes(rangeStartDate, rangeEndDate);
 
-        angular.extend($scope, dataObj.BaseFit); //or merge the whole data object...?
+        $scope.extendWith('Fit', dataObj);
+        $scope.extendWith('BaseFit', dataObj);
+        $scope.extendWith('PeakFit', dataObj);
         blockUI.stop();
     }
     
@@ -93,7 +122,7 @@
         $http.post('/Prices/Forecast', data) //default parameters?...
         .success(getSuccess)
         .error(function (status) {
-
+            //TODO: modify to fit gasForwards.js...
         });
         var qs = "";
         
@@ -115,7 +144,8 @@
                 data: priceData,
                 tooltip: {
                     valueDecimals: 4
-                }
+                },
+                zIndex: 9
             };
 
             chart.addSeries(serie);

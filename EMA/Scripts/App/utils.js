@@ -8,6 +8,10 @@
     }
 }
 
+function addConfidenceBands(highchart, confidenceBands) {
+
+}
+
 function objectPropertiesToObj() {
     $scope = arguments[0];
 
@@ -131,4 +135,10 @@ function registerParameter($scope, param, value) {
     $scope.changeDropDownValue = function (dropdown, value) {
         $scope[dropdown] = value;
     }
+}
+
+//Extends the angular scope with a child provided as a child from given object found by the given name
+function extendWith(name, object) {
+    this[name] = {};
+    angular.extend(this[name], object[name]);
 }
