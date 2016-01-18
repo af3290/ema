@@ -52,7 +52,7 @@ module Forecast =
 
     type FitStatistics = {
         Bias : float  //mean error
-        R : float
+        RSquared : float
         IndependencePValue: float
         NormalityPValue: float
         //min, avg, max
@@ -68,7 +68,7 @@ module Forecast =
         let ressd = Statistics.StandardDeviation residuals
         let resm = Statistics.Mean residuals
 
-        let prcErrs = residuals./realized
+        let prcErrs = residuals./realized |> Array.map abs
         let sqErrs = residuals ^^ 2.0
         
         let mutable normalityPValue = 0.0
@@ -78,20 +78,22 @@ module Forecast =
             //use T-Test
             let tval = resm / (ressd * sqrt((float)residuals.Length))
             let studt = new StudentT(0.0, ressd, (float)residuals.Length)
-            let pVal = studt.Density(tval)
+            //in case mean is negative, use abs and then negative
+            let pVal = studt.CumulativeDistribution(-abs tval)
             normalityPValue <- pVal
         else
             //use Z-Test
-            let zval = resm / ressd
+            let zval = resm / (ressd * sqrt((float)residuals.Length))
             let norm = new Normal(resm, ressd)    
-            let pVal = norm.Density(zval)
+            let pVal = norm.CumulativeDistribution(-abs zval)
             normalityPValue <- pVal
 
-        let autocorr = SeriesAutocorrelation residuals 23
+        let autocorrLen = min 23 (residuals.Length - 1)
+        let autocorr = SeriesAutocorrelation residuals autocorrLen
         
         let res = {
             Bias = forecasted -- realized |> Array.average;
-            R = MathNet.Numerics.GoodnessOfFit.RSquared(realized, forecasted)
+            RSquared = MathNet.Numerics.GoodnessOfFit.RSquared(realized, forecasted)
             IndependencePValue = autocorr |> Array.max;
             NormalityPValue = normalityPValue;
             APE = [| prcErrs|>Array.min; prcErrs|>Array.average; prcErrs|>Array.max |];
