@@ -5,7 +5,7 @@ namespace Utils.NordPoolSpot
         Production, Production_Prognosis,
         Consumption, Consumption_Prognosis,
         Wind_Power, Wind_Power_Prognosis,
-        Elspot_Prices, Elspot_Volumes, Elspot_Flows,
+        Elspot_Prices, Elspot_Volumes, Elspot_Flows, Elspot_Capacities,
         Hydro_Reservoir
     }
 }

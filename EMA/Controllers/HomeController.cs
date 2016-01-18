@@ -16,7 +16,7 @@ namespace EMA.Controllers
         public ActionResult Index()
         {
             //tests here fow now...
-            
+
             //var np = new NordicPrices();
             //var models = np.QuantitativeModels.ToList();
             //apparently we got only 156.. matlab has got 157... we missed one, which one...?
@@ -38,7 +38,11 @@ namespace EMA.Controllers
             ViewBag.Message = "Your contact page.";
 
             return View();
-        }        
-        
+        }
+
+        public ActionResult TimeSeriesTest()
+        {
+            return View();
+        }
     }
 }

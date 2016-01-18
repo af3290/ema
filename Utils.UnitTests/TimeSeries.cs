@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MarketModels;
+using static MarketModels.Tests.TimeSeriesTests;
 
 namespace Utils.UnitTests
 {
@@ -75,6 +76,16 @@ namespace Utils.UnitTests
             
             //Assert.AreEqual("Forecast does not match", expected,
             //        prediction, 0.0000000000001);
+        }
+
+        [TestMethod]
+        public void ARMA()
+        {
+            var ts = new TimeSeriesUnitTests();
+
+            //ts.FilterTest2();
+
+            ts.ARMATest1();
         }
     }
 

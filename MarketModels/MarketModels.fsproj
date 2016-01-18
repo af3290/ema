@@ -52,8 +52,8 @@
   <ItemGroup>
     <Content Include="packages.config" />
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="MathFunctions.fs" />
     <Compile Include="Operations.fs" />
+    <Compile Include="MathFunctions.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="StochasticProcesses.fs" />
     <Compile Include="Simulations.fs" />

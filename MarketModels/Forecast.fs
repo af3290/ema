@@ -13,6 +13,8 @@ module Forecast =
         Confidence : float[,] //because the inners have the same lengths! not array of arrays!
     }
 
+    ///Averages over all seasonalities provided and returns the average as the next period's forecast
+    ///while the min and max represent confidence bands
     let Naive (data : float[]) (seasonalities : int[]) (forecastSteps : int) (alpha : float) : ForecastResult =
         //data provided at starting of first largest season...???
         //average from all seasonalities.. make some histogram... return 95%..

@@ -171,7 +171,6 @@
     <Content Include="Views\Shared\Error.cshtml" />
     <Content Include="Views\Shared\_Layout.cshtml" />
     <Content Include="Views\Home\About.cshtml" />
-    <Content Include="Views\Home\Contact.cshtml" />
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Shared\Lockout.cshtml" />
     <Content Include="Views\Plotly\SpotMarketCurvesSurface.cshtml" />
@@ -188,6 +187,7 @@
     <Content Include="Views\Plotly\ProbabilitySurface.cshtml" />
     <Content Include="Views\GasMarkets\ForwardCurves.cshtml" />
     <Content Include="Views\Components\SelectionList.cshtml" />
+    <Content Include="Views\Home\TimeSeriesTest.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

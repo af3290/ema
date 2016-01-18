@@ -4,14 +4,119 @@ module TimeSeries =
     //TODO: port from matlab... yes, awesome...
     open System
     open System.Collections.Generic    
+    open Operations
+    open MathNet.Numerics
+    open MathNet.Numerics.Statistics
+    open MathNet.Numerics.LinearAlgebra.Double
     open MathFunctions
 
-    //AR estimation function based on specific lags
-    let AR2 (series : float[]) (nbForecastSteps :int) : float[] =
-        let autocor = SeriesAutocorrelation series 2
-        //etc...
-        series
+    type LagOp = {
+        Coeffs : float[];
+        Lags : float[];
+    }
 
-    let AR2Simulate (series : float[]) (nbForecastSteps :int) : float[] =
-        series
-    //todo... etc...
+    type ARMAResult = {
+        AR : float[]; 
+        MA : float[]; 
+        Const : float; 
+        Var: float
+    }
+
+    ///Simple univariate ARMA estimation based on internal.econ.arma9, (as similar as possible to its code) from
+    ///matlab. Returns the coefficients for ARMA, its constant and variance
+    let ARMA (series : float[]) (p : int) (q : int) : ARMAResult =
+        if p < 0 || q < 0 then
+            failwith "Invalid ARMA parameters"
+
+        //parameters of the result to be determined
+        let mutable AR = Array.init p (fun i -> 0.0)
+        let MA = Array.init q (fun i -> 0.0)
+        let mutable Const = 0.0
+        let mutable Var = 0.0
+
+        //local calculation variables
+        let mutable C = Array2D.init p p (fun i j -> 0.0)
+        let mutable d = Array.init p (fun i -> 0.0)
+        
+        if p > 0 then 
+            let autocor = SeriesAutocorrelationFFT series (p + q)            
+            let var = Statistics.Variance(series)
+            let covar = autocor |> Array.map (fun x -> x * var)
+            
+            //don't deal with non finte case... since we're starting from black, never from already passed coefficients/state
+
+            //teoplitz matrix...
+            if q > 0 then
+                let row = { q.. -1 .. q - p + 1 } |> Seq.map abs |> Seq.map (fun x -> covar.[x]) |> Seq.toArray
+                C <- TeoplitzInit covar.[q..q+p-1] row
+                d <- covar.[q+1..q+p]
+                ()
+            else
+                C <- TeoplitzInit covar.[0..p-1] covar.[0..p-1]
+                d <- covar.[0..p]
+                ()
+            
+            //Now find AR coefficients using solving a linear system, 
+            //since no state, don't need to held coefficients fixed, no iFixedAR... no least squares lsqlin
+            let mutable rmatrixsolveInt = 0
+            let mutable rmatrixsolveRep : alglib.densesolverreport = null
+
+            alglib.rmatrixsolve(C, 2, d, &rmatrixsolveInt, &rmatrixsolveRep, &AR)
+
+            //where is polynomialsolve ...????
+            //no need for stationarity test, since no state...
+        
+        //WHY DO WE GET SO MUCH DIFFERENT VALUES THAN MATLAB... WHY... WHY??????????
+        //THIS FAILS withough proper values... yes...
+        let bCoeffs = Array.init (AR.Length + 1) (fun i -> if i = 0 then 1.0 else -AR.[i-1])        
+        let filteredSeries = Filter1D bCoeffs [|1.0|] series   
+        
+        //variance of the filtered series now...     
+        Const <- filteredSeries |> Array.average
+        let var = Statistics.Variance(filteredSeries)
+
+        //we're done with it, return
+        if q = 0 then 
+            Var <- var
+            
+            {
+                AR = AR;
+                MA = MA;
+                Const = Const;
+                Var = Var
+            }
+        else
+            //continue estimating MAs
+            let autocor = SeriesAutocorrelationFFT series q
+            let c = autocor |> Array.map (fun x -> x * var) //add 1 back...???
+        
+            //start MA optimization loop
+            let tol = 0.01
+            let mutable counter = 0
+        
+            let MA1 = Array.init q (fun i -> 1.0)
+                
+            while (L2Norm (MA -- MA1) > tol && counter < 100) do
+                //put data in previous state to check norm change...
+                MA |> Array.iteri (fun i x -> MA1.[i] <- x)
+
+                //variance of innovation process e(t)
+                let variance = c.[0] / (1.0 + Array.sum (MA .* MA))
+
+                //eigenvalues invertibility... no now
+
+                //moving average coefficients estimation, remember 0 based index...
+                for j in q - 1 .. -1 .. 0 do
+                    //no state, so no need to keep it, check it thoroughly... revise
+                    let maPart = if q = 1 then 0.0 else MA.[0..q-j-1] .* MA.[j..q-1] |> Array.sum
+                    MA.[j] <- c.[j+1] * 1.0 / variance - maPart
+
+                counter <- counter + 1
+                     
+            {
+                AR = AR;
+                MA = MA;
+                Const = Const;
+                Var = Var
+            }
+

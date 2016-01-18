@@ -1,0 +1,69 @@
+﻿@{
+    ViewBag.Title = "TST";
+}
+<script type="text/javascript">
+    $(function () {
+        var chart = $('#container').highcharts('StockChart', {
+            tooltip: {
+                valueDecimals: 4
+            },
+            rangeSelector: {
+                selected: 1
+            },
+            title: {
+                text: 'Nordic Forward Contracts... :D'
+            },
+            xAxis: {
+                ordinal: false,
+                type: 'datetime'
+                //,tickInterval: 86400000
+            },
+            series: []
+        });
+
+        $.getJSON('/Prices/HoltWintersTest/Data', function (data) {
+            var priceData = [];
+            for (var i = 0; i < data.length; i++) {
+                //try using linq.js => YES!
+                var dt = Date.parse(data[i].DateTime);
+                priceData[i] = [dt, data[i].Value];
+            }
+
+            var serie = {
+                name: "Historical Value",
+                color: '#CFCFCF',
+                data: priceData,
+                tooltip: {
+                    valueDecimals: 4
+                }
+            };
+
+            chart.addSeries(serie);
+
+            $.getJSON('/Prices/HoltWintersTest/Prediction', function (data) {
+                var priceData = [];
+                for (var i = 0; i < data.length; i++) {
+                    //try using linq.js => YES!
+                    var dt = Date.parse(data[i].DateTime);
+                    priceData[i] = [dt, data[i].Value];
+                }
+
+                var serie = {
+                    name: "Historical Price",
+                    color: '#FF0000',
+                    data: priceData,
+                    tooltip: {
+                        valueDecimals: 4
+                    }
+                };
+
+                chart.addSeries(serie);
+            });
+        });
+    })
+</script>
+<div class="row">
+    <div class="col-md-4">
+        <div id="container"></div>
+    </div>
+</div>

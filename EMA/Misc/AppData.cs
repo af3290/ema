@@ -132,11 +132,17 @@ namespace EMA.Misc
             //predictors, 5 variables should be enough, for a simple naive forecast... yes...
             //ExcelToJsonSeriesPredictors1(DataItem.Production);
             //ExcelToJsonSeriesPredictors1(DataItem.Consumption);
-            ExcelToJsonSeriesPredictors2(DataItem.Production_Prognosis);
-            ExcelToJsonSeriesPredictors2(DataItem.Consumption_Prognosis);
+            //ExcelToJsonSeriesPredictors2(DataItem.Production_Prognosis);
+            //ExcelToJsonSeriesPredictors2(DataItem.Consumption_Prognosis);
+            ExcelToJsonSeriesPredictors2(DataItem.Elspot_Capacities); //IN TODO..
             ////ExcelToJsonSeriesPredictors3(DataItem.Hydro_Reservoir);
             //ExcelToJsonSeriesPredictors3(DataItem.Wind_Power);
             ////ExcelToJsonSeries(DataItem.Wind_Power_Prognosis);
+        }
+
+        public static void ExcelToJsonCapacities(DataItem di)
+        {
+
         }
 
         public static void ExcelToJsonSeries(DataItem di)

@@ -134,28 +134,46 @@ namespace EMA.Controllers
             var th = GetTimeHorizonValue(forecastHorizon);
             //we need always seasonalities > forecast horizon
             var ses = allses.Where(s => s >= th).ToArray();
-                        
+
             //add naive with exogenous variables next...
-            var forecast = MarketModels.Forecast.Naive(data, ses, th, 0.95);
+            if(forecastMethod == "Naive")
+            {
+
+            } else if (forecastMethod == "HWT")
+            {
+
+            }
+            //var forecast = MarketModels.Forecast.Naive(data, ses, th, 0.95);
+            var last3Month = data.Reverse().Take(24 * 7 * 4 * 3).Reverse().ToArray();
+            //var hwparams = HoltWinters.OptimizeTripleHWT(last3Month, 24, th);
+            //hwparams[0], hwparams[1], hwparams[2]
+            var forecastVals = HoltWinters.TripleHWT(last3Month, 24, th, 0.5, 0.4, 0.6);
+            //remember it gives all back...
+            forecastVals = forecastVals.Reverse().Take(th).Reverse().ToArray();
+            //confidences are empty... because HWT doesn't output them... yet...
+            var forecast = new Forecast.ForecastResult(forecastVals, new double[,] { });
 
             var rlzd = d.Where(x => x.DateTime >= dt)
                 .Take(th)
                 .Select(x => x.Value != null ? (double)x.Value : 0) //0 for now, when interpolation is done... etc..                
                 .ToArray();
 
-            var forecasted = forecast.Forecast.Take(rlzd.Length).ToArray();
+            //var forecasted = forecast.Forecast.Take(rlzd.Length).ToArray();
+            var forecasted = forecast.Forecast.Reverse().Take(rlzd.Length).Reverse().ToArray();
 
-            MarketModels.Forecast.FitStatistics bfit = null;
+            Forecast.FitStatistics bfit = null, pfit = null;
 
-            if (rlzd.Length>0)
+            if (rlzd.Length > 0) { 
                 bfit = MarketModels.Forecast.ForecastFit(forecasted, rlzd);
+
+            }
 
             var obj = new
             {                
                 Result = forecast,
                 DaysAhead = th / 24,
                 BaseFit = bfit, //refine later...
-                PeakFit = bfit
+                PeakFit = pfit
             };
         
             return Json(obj, JsonRequestBehavior.AllowGet);        
