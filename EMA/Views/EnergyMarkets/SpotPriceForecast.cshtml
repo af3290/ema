@@ -73,14 +73,14 @@
             <h2>Result</h2>
             <div id="container" style="height: 400px; min-width: 310px"></div>
             <div id="model-details" class="row">
-                <div class="col-md-4">
+                <div class="col-md-6">
                     @Html.Partial("~/Views/Components/ModelSummary.cshtml")
                     @Html.Partial("~/Views/Components/ForecastFit.cshtml")                    
                 </div>
-                <div class="col-md-8">
+                @*<div class="col-md-8">
                     <iframe id="MarketCurvesFrame" src="{{ForecastSurfaceIframeUrl}}"
                             style="width: 100%; height: 480px; border: 0;" frameBorder="0"></iframe>
-                </div>
+                </div>*@
             </div>                 
         </div>
     </div>

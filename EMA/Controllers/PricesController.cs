@@ -143,15 +143,16 @@ namespace EMA.Controllers
             {
 
             }
-            //var forecast = MarketModels.Forecast.Naive(data, ses, th, 0.95);
+            var forecast = MarketModels.Forecast.Naive(data, ses, th, 0.95);
+
             var last3Month = data.Reverse().Take(24 * 7 * 4 * 3).Reverse().ToArray();
             //var hwparams = HoltWinters.OptimizeTripleHWT(last3Month, 24, th);
             //hwparams[0], hwparams[1], hwparams[2]
-            var forecastVals = HoltWinters.TripleHWT(last3Month, 24, th, 0.5, 0.4, 0.6);
+            //var forecastVals = HoltWinters.TripleHWT(last3Month, 24, th, 0.5, 0.4, 0.6);
             //remember it gives all back...
-            forecastVals = forecastVals.Reverse().Take(th).Reverse().ToArray();
+            //forecastVals = forecastVals.Reverse().Take(th).Reverse().ToArray();
             //confidences are empty... because HWT doesn't output them... yet...
-            var forecast = new Forecast.ForecastResult(forecastVals, new double[,] { });
+            //var forecast = new Forecast.ForecastResult(forecastVals, new double[,] { });
 
             var rlzd = d.Where(x => x.DateTime >= dt)
                 .Take(th)
@@ -161,17 +162,23 @@ namespace EMA.Controllers
             //var forecasted = forecast.Forecast.Take(rlzd.Length).ToArray();
             var forecasted = forecast.Forecast.Reverse().Take(rlzd.Length).Reverse().ToArray();
 
-            Forecast.FitStatistics bfit = null, pfit = null;
+            Forecast.FitStatistics fit = null, bfit = null, pfit = null;
 
-            if (rlzd.Length > 0) { 
-                bfit = MarketModels.Forecast.ForecastFit(forecasted, rlzd);
-
+            if (rlzd.Length > 0) {
+                fit = MarketModels.Forecast.ForecastFit(forecasted, rlzd);
+                pfit = MarketModels.Forecast.ForecastFit(
+                    GetSubPeriodsFrom(forecasted, 24, DAY_PEAK_HOURS), 
+                    GetSubPeriodsFrom(rlzd, 24, DAY_PEAK_HOURS));
+                bfit = MarketModels.Forecast.ForecastFit(
+                    GetSubPeriodsFrom(forecasted, 24, DAY_BASE_HOURS),
+                    GetSubPeriodsFrom(rlzd, 24, DAY_BASE_HOURS));
             }
 
             var obj = new
             {                
                 Result = forecast,
                 DaysAhead = th / 24,
+                Fit = fit,
                 BaseFit = bfit, //refine later...
                 PeakFit = pfit
             };

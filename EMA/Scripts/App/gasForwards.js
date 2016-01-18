@@ -7,12 +7,15 @@
     $scope.onChangedPostResponse = { "Data": postSuccess, "Simulations": simulationPostSuccess };
     
     registerParameter($scope, 'date', new Date(2014, 4, 15), postSuccess);
+
     //bounds...
     $scope.dateMin = new Date(2005, 0, 1);
     $scope.dateMax = new Date(2015, 6, 1);
+
     //have them here so that they could also be edited... but always set up to show forward 12 months!!!
     registerParameter($scope, 'afterMaturity', new Date(2014, 5, 1));
     registerParameter($scope, 'beforeMaturity', new Date(2015, 4, 1));
+
     //simulation parameters, is it ok to store them alltogether, no, use frameId
     registerParameter($scope, 'curve', "Natural-Gas-Futures-NYMEX");
     registerParameter($scope, 'forwardSteps', 12);
