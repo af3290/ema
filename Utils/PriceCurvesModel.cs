@@ -61,7 +61,7 @@ namespace Utils
         }
 
         public void CalculateEquilibrium()
-        {
+        {            
             /* Find bounding box */
             var maxMinVolume = Math.Max(DemandCurve.Min(d => d.Volume), SupplyCurve.Min(d => d.Volume));
             var minMaxVolume = Math.Min(DemandCurve.Max(d => d.Volume), SupplyCurve.Max(d => d.Volume));
@@ -77,17 +77,27 @@ namespace Utils
                 .Where(d => maxMinVolume <= d.Volume && d.Volume <= minMaxVolume)
                 .Where(d => maxMinPrice <= d.Price && d.Price <= minMaxPrice)
                 .ToList();
+            
+            try {
+                /* Run equilibrium procedure */
+                //better version: LP program
+                //=> has a very odd shaping for peak hours... WHY?
+                //CalculateEquilibriumLP(subDemandCurve, subSupplyCurve);
 
-            /* Start aproximating */
-            var firstDemandPoint = subDemandCurve.First();
-            var lastDemandPoint = subDemandCurve.Last();
+                //considerably less work, but still inefficient
+                CalculateEquilibriumBruteForce(subDemandCurve, subSupplyCurve);
+            } catch(Exception ex) {
+                //log it..
+                
+                //should instead be null, so that it could go missing...
 
-            //better version: LP program
-            //=> has a very odd shaping for peak hours... WHY?
-            //CalculateEquilibriumLP(subDemandCurve, subSupplyCurve);
-
-            //considerably less work, but still inefficient
-            CalculateEquilibriumBruteForce(subDemandCurve, subSupplyCurve);
+                //adopt a simple interpolation technique...
+                _equilibrium = new MarketPoint()
+                {
+                    Price = 0,
+                    Volume = 0
+                };
+            }
         }
 
         public void CalculateEquilibriumLP(List<MarketPoint> demandCurve, List<MarketPoint> supplyCurve)
@@ -146,7 +156,7 @@ namespace Utils
             
             if (jStart == jEnd && jStart < SupplyCurve.Count - 1)
                 jEnd = jStart + 1;
-
+            
             /* Interpolate to find equilibrium values */
             var demandLine = new Line(
                 demandCurve[iStart].Volume, demandCurve[iStart].Price,

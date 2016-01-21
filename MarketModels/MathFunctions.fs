@@ -7,6 +7,16 @@ module MathFunctions =
     open MathNet.Numerics.Statistics
     open MathNet.Numerics.Distributions
     
+    ///Shorthands for those long Array methods...
+
+    ///Old boring mean...
+    let mean (vec : float[]) : float =
+        Statistics.Mean vec
+
+    ///Sample standard deviation
+    let stdev (vec : float[]) : float =
+        Statistics.StandardDeviation vec
+
     ///Euclidean norm
     let L2Norm (vec : float[]) : float = 
         sqrt ( vec |> Array.map (fun x -> x * x) |> Array.sum )
@@ -24,6 +34,8 @@ module MathFunctions =
             let toSkip = min arr.Length lastN   // no overflow
             let toTake = min mIndex n           // to take
             arr |> Seq.skip toSkip |> Seq. take toTake |> Seq.toArray
+
+    //Serious methods follow:
 
     ///Corresponding to 1D digital filter from matlab... similar to moving average
     ///Follows this formula: 
@@ -87,7 +99,7 @@ module MathFunctions =
         alglib.fftc1dinv(&acf, cseries.Length)
 
         //Scale back and transform to real numbers, take lags+1 since it's 0 index based...
-        let racf  = acf |> Array.map (fun x -> x / acf.[0]) |> Seq.take (lags + 1) |> Seq.map (fun x -> x.x) |> Seq.toArray
+        let racf  = acf |> Seq.take (lags + 1) |> Seq.map (fun x -> x / acf.[0])  |> Seq.map (fun x -> x.x) |> Seq.toArray
         
         racf
         
