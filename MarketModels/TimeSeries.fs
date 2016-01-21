@@ -10,10 +10,13 @@ module TimeSeries =
     open MathNet.Numerics.LinearAlgebra.Double
     open MathFunctions
 
+    ///Convention: missing lags are fixed at 0, not missing with 0s are to be optimized...
     type LagOp = {
-        Coeffs : float[];
-        Lags : float[];
-    }
+        Coefficients : float[];
+        Lags : int[];
+        
+    } with
+        member this.Degree with get() = this.Lags |> Seq.last
 
     type ARMAResult = {
         AR : float[]; 
@@ -22,9 +25,13 @@ module TimeSeries =
         Var: float
     }
 
-    ///Simple univariate ARMA estimation based on internal.econ.arma9, (as similar as possible to its code) from
+    ///Simple univariate ARMA estimation based on internal.econ.arma0, (as similar as possible to its code) from
     ///matlab. Returns the coefficients for ARMA, its constant and variance
-    let ARMA (series : float[]) (p : int) (q : int) : ARMAResult =
+    //TODO: refactor when done...
+    let ARMA (series : float[]) (ar : LagOp) (ma : LagOp) : ARMAResult =
+        let p = ar.Degree
+        let q = ma.Degree
+
         if p < 0 || q < 0 then
             failwith "Invalid ARMA parameters"
 
@@ -49,25 +56,32 @@ module TimeSeries =
             if q > 0 then
                 let row = { q.. -1 .. q - p + 1 } |> Seq.map abs |> Seq.map (fun x -> covar.[x]) |> Seq.toArray
                 C <- TeoplitzInit covar.[q..q+p-1] row
-                d <- covar.[q+1..q+p]
-                ()
+                d <- covar.[q+1..q+p]                
             else
                 C <- TeoplitzInit covar.[0..p-1] covar.[0..p-1]
-                d <- covar.[0..p]
-                ()
+                d <- covar.[0..p]                
             
-            //Now find AR coefficients using solving a linear system, 
-            //since no state, don't need to held coefficients fixed, no iFixedAR... no least squares lsqlin
             let mutable rmatrixsolveInt = 0
-            let mutable rmatrixsolveRep : alglib.densesolverreport = null
 
-            alglib.rmatrixsolve(C, 2, d, &rmatrixsolveInt, &rmatrixsolveRep, &AR)
+            //has no 0 fixed lags
+            if ar.Degree = ar.Lags.Length then
+                //find AR coefficients using solving a linear system,                
+                let mutable rmatrixsolveRep : alglib.densesolverreport = null
+                alglib.rmatrixsolve(C, C.GetLength(0), d, &rmatrixsolveInt, &rmatrixsolveRep, &AR)
+            //has some 0 fixed lags
+            else
+                //find AR coefficients using linear least squares...
+                let mutable rmatrixsolveRep : alglib.densesolverlsreport = null
+
+                //setup constraints
+
+                //run solver
+                //alglib.lsfitlinearc(, C.GetLength(0), C.GetLength(1), d, 0.0,&rmatrixsolveInt, &rmatrixsolveRep, &AR) ... etc...                
+                alglib.rmatrixsolvels(C, C.GetLength(0), C.GetLength(1), d, 0.0,&rmatrixsolveInt, &rmatrixsolveRep, &AR)
 
             //where is polynomialsolve ...????
             //no need for stationarity test, since no state...
         
-        //WHY DO WE GET SO MUCH DIFFERENT VALUES THAN MATLAB... WHY... WHY??????????
-        //THIS FAILS withough proper values... yes...
         let bCoeffs = Array.init (AR.Length + 1) (fun i -> if i = 0 then 1.0 else -AR.[i-1])        
         let filteredSeries = Filter1D bCoeffs [|1.0|] series   
         
@@ -77,17 +91,15 @@ module TimeSeries =
 
         //we're done with it, return
         if q = 0 then 
-            Var <- var
-            
             {
                 AR = AR;
                 MA = MA;
                 Const = Const;
-                Var = Var
+                Var = var
             }
         else
             //continue estimating MAs
-            let autocor = SeriesAutocorrelationFFT series q
+            let autocor = SeriesAutocorrelationFFT filteredSeries q
             let c = autocor |> Array.map (fun x -> x * var) //add 1 back...???
         
             //start MA optimization loop
@@ -95,7 +107,8 @@ module TimeSeries =
             let mutable counter = 0
         
             let MA1 = Array.init q (fun i -> 1.0)
-                
+              
+            //MA minimize change variance until a significant fit is found
             while (L2Norm (MA -- MA1) > tol && counter < 100) do
                 //put data in previous state to check norm change...
                 MA |> Array.iteri (fun i x -> MA1.[i] <- x)
@@ -105,10 +118,12 @@ module TimeSeries =
 
                 //eigenvalues invertibility... no now
 
-                //moving average coefficients estimation, remember 0 based index...
+                //moving average coefficients estimation
                 for j in q - 1 .. -1 .. 0 do
                     //no state, so no need to keep it, check it thoroughly... revise
                     let maPart = if q = 1 then 0.0 else MA.[0..q-j-1] .* MA.[j..q-1] |> Array.sum
+
+                    //subsequent autocorrelations for each 
                     MA.[j] <- c.[j+1] * 1.0 / variance - maPart
 
                 counter <- counter + 1
@@ -119,4 +134,32 @@ module TimeSeries =
                 Const = Const;
                 Var = Var
             }
+
+    ///Shortcut method to avoid using LagOps, initializes LagOps with all 1..p and q...
+    let ARMASimple (series : float[]) (p : int) (q : int) : ARMAResult = 
+        let ar = {
+            Coefficients = Array.init p (fun i -> 0.0);
+            Lags = Array.init p (fun i -> i)
+        }
+        
+        let ma = {
+            Coefficients = Array.init q (fun i -> 0.0);
+            Lags = Array.init q (fun i -> i)
+        }
+
+        ARMA series ar ma
+
+    ///Shortcut method to avoid using LagOps, pass just the lags to be optimized...
+    let ARMASimple2 (series : float[]) (p : int[]) (q : int[]) : ARMAResult = 
+        let ar = {
+            Coefficients = Array.init p.Length (fun i -> 0.0);
+            Lags = p
+        }
+        
+        let ma = {
+            Coefficients = Array.init q.Length (fun i -> 0.0);
+            Lags = q
+        }
+
+        ARMA series ar ma
 

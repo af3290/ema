@@ -69,7 +69,7 @@ namespace Utils.UnitTests
 
             var abg = HoltWinters.OptimizeTripleHWT(y, period, m);
 
-            double[] prediction = HoltWinters.TripleHWT(y, period, m, abg[0], abg[1], abg[2]);
+            double[] prediction = HoltWinters.TripleHWT(y, period, m, abg.alpha, abg.beta, abg.gamma);
 
             var tst = string.Join(" ", y.Select(x => x.ToString()));
             var tstpred = string.Join(" ", prediction.Select(x => x.ToString()));
@@ -83,9 +83,11 @@ namespace Utils.UnitTests
         {
             var ts = new TimeSeriesUnitTests();
 
+            //ts.TestFloatingPointErrorsVsMatlab();
             //ts.FilterTest2();
 
-            ts.ARMATest1();
+            //ts.ARMATest1();
+            ts.ARMATestLongerLags();
         }
     }
 
