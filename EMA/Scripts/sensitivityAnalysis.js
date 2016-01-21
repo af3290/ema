@@ -105,7 +105,7 @@
         $http.get('/Prices/LiveNordicProductionConsumption')
         .success(getSuccess)
         .error(function (status) {
-
+            blockUI.stop();
         });
 
         $('[data-toggle="tooltip"]').tooltip();
@@ -203,12 +203,6 @@
     }
     
     function plotSensitivity() {
-        var count = profileChart.series.length;
-        //insted of readding them.. try updating their values...
-        for (var i = 1; i < count; i++) {
-            profileChart.series[profileChart.series.length - 1].remove();
-        }
-
         plotBands($scope.MarketCurves, "Demand", $scope.sensitivityChangePercentage);
         plotBands($scope.MarketCurves, "Supply", $scope.sensitivityChangePercentage);
     }
@@ -249,6 +243,9 @@
         /* If the chart is loaded, don't reload it */
         if (profileChart.series.count > 0)
             return;
+
+        /* Clear all */
+        clearSeriesContainingName(profileChart, "");
 
         /* Hourly profile */
         var d = Enumerable.From($scope.MarketCurves).Select("x => [x.Hour, x.Equilibrium.Price]").ToArray();

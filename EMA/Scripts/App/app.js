@@ -47,4 +47,6 @@ emaDemos.directive('datetimez', function () {
 //    }
 //});
 
-TICKS_IN_SECOND = 86400000;
+TICKS_IN_DAY = 86400000;
+
+TICKS_IN_HOUR = 3600000;

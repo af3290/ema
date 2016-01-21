@@ -1,16 +1,21 @@
 ﻿emaDemos.controller('ForecastController', function ($scope, $http, blockUI) {
-    //abstract charts to a projects called .WebUtils... all forecasting and graphs must be there...
-    //and maybe used as components... GREAT IDEA!
+    $scope.$http = $http;
 
-    $scope.extendWith = extendWith;
+    $scope.postUrl = {
+        "Data": "/Prices/HistoricalSystemPrice?refresh=false&resolution=5",
+        "Forecast": "/Prices/Forecast"
+    };
 
-    $scope.date = new Date(2015, 7, 3); //js months start at 0..
-    angular.extend($scope, SERVER_CONSTANTS);
-    $scope.forecastMethod = $scope.ForecastMethods[0];
-    $scope.timeHorizon = $scope.TimeHorizons[0];
-    $scope.spikesPreprocessMethod = $scope.SpikesPreprocessMethods[0];
-    $scope.confidence = 95;
-    $scope.exogenousVariables = {};//the selected values...
+    $scope.onChangedPostResponse = { "Data": dataSuccess, "Forecast": forecastSuccess };
+
+    $scope.currentFrameId = "Forecast"; //all changes are posted there...
+    registerParameter($scope, 'date', new Date(2015, 7, 3));
+    registerParameter($scope, 'forecastMethod', $scope.ForecastMethods[0]);
+    registerParameter($scope, 'spikesPreprocessMethod', $scope.SpikesPreprocessMethods[0]);
+    registerParameter($scope, 'timeHorizon', $scope.TimeHorizons[0]);
+    registerParameter($scope, 'confidence', 95);
+    registerParameter($scope, 'exogenousVariables', {});
+    
     $scope.Currency = "€";
 
     var chart = $('#container').highcharts('StockChart', {
@@ -34,10 +39,15 @@
     window.chart = chart = $('#container').highcharts();
     
     /* Private methods */
-    function getSuccess(dataObj) {
+    function prcFrmt(prc) {
+        return (prc*100).toFixed(2);
+    }
+
+    function forecastSuccess(dataObj) {
         clearSeriesContainingName(chart, "Forecast");
         clearSeriesContainingName(chart, "Confidence");
 
+        /* Do forecast */
         var forecast = dataObj.Result.Forecast;
         
         var dt = Date.parse($scope.date);
@@ -50,56 +60,71 @@
         var serie = {
             name: "Forecast ",
             color: "#FF0000",
-            dashStyle: "ShortDot",
+            dashStyle: "ShortDash",
             data: data,
             zIndex: 9
         };
 
         chart.addSeries(serie);
 
+        /* Do confidences */
         var confidences = dataObj.Result.Confidence;
         var confidenceBand = [];
+        var bandCount = confidences.length / 2;
+
         //add confidence values...
         for (var i = 0; i < confidences.length; i++) {
             var confidenceSerie = confidences[i];
             var confidenceValues = [];
+
             //first upper, then lower
             for (var j = 0; j < confidenceSerie.length; j++) {
-                var dVal = dt + (j + 2) * 3600000;
+                var dVal = dt + (j + 2) * TICKS_IN_HOUR;
                 var cVal = confidenceSerie[j];
+
                 confidenceValues[j] = [dVal, cVal];
                 
-                if (confidenceBand[j] == undefined)
-                    confidenceBand[j] = [dVal, 0, cVal]
-                else
-                    confidenceBand[j][1] = cVal;
+                //start doing the bands when lower intervals are processed...
+                if (i >= bandCount) {
+                    var subi = confidences.length - i - 1;
+                    confidenceBand[subi][j] = [dVal, confidences[subi][j], cVal]
+                } else {
+                    //initialize
+                    confidenceBand[i] = [];
+                }
             }
 
             var serie = {
-                name: "Confidence " + ((i === 0) ? "Upper" : "Lower"),
+                name: "Confidence " + ((i < bandCount) ? "Upper" : "Lower")
+                    + prcFrmt(dataObj.Result.ConfidenceLevels[i % bandCount]) + ' %',
                 color: "#FF0000",
                 type: 'line',
-                dashStyle: "Solid",
+                dashStyle: "ShortDot",
                 data: confidenceValues,
-                zIndex: 9
+                zIndex: 9,
+                enableMouseTracking: false
             };
 
             chart.addSeries(serie);
         }
 
-        //add confidence band area
-        var cofidenceBandArea = {
-            name: 'ConfidenceBand',
-            data: confidenceBand,
-            type: 'arearange',
-            lineWidth: 0,
-            linkedTo: ':previous',
-            color: '#FF0000',
-            fillOpacity: 0.6,
-            zIndex: 1
-        };
+        //starts from narrower to winder
+        for (var i = 0; i < bandCount; i++) { 
+            /* Add confidence bands areas */
+            var cofidenceBandArea = {
+                name: 'Confidence Band ' + prcFrmt(dataObj.Result.ConfidenceLevels[i]) + ' %',
+                data: confidenceBand[i],
+                type: 'arearange',
+                lineWidth: 0,
+                linkedTo: ':previous',
+                color: '#FF0000',
+                fillOpacity: 0.15 + (bandCount - i) * 0.1,
+                zIndex: (bandCount - i)
+            };
 
-        chart.addSeries(cofidenceBandArea);
+            chart.addSeries(cofidenceBandArea);
+        }
+
 
         var thisDate = new Date($scope.date);
         thisDate.setTime(thisDate.getTime() + (2 * 60 * 60 * 1000)); //UTC bullshit?...
@@ -112,73 +137,35 @@
         $scope.extendWith('Fit', dataObj);
         $scope.extendWith('BaseFit', dataObj);
         $scope.extendWith('PeakFit', dataObj);
+        $scope.extendWith('MathModel', dataObj);
         blockUI.stop();
     }
-    
-    function loadForecast() {
-        var data = objectPropertiesToObj($scope, 'date',
-            'forecastMethod', 'timeHorizon', 'confidence', 'exogenousVariables'); //how? , 'exogenousVariables'
-        blockUI.start();
-        $http.post('/Prices/Forecast', data) //default parameters?...
-        .success(getSuccess)
-        .error(function (status) {
-            //TODO: modify to fit gasForwards.js...
-        });
-        var qs = "";
-        
-        $scope.ForecastSurfaceIframeUrl = "/Plotly/ProbabilitySurface?series=ElsSystem&bins=6&period=24&distributionType=empirical" + qs;
-    }
-
-    function loadHistoricalData() {
-        $http.get('/Prices/HistoricalSystemPrice?refresh=false&resolution=5').success(function (data) {
-            var priceData = [];
-            for (var i = 0; i < data.length; i++) {
-                //try using linq.js => YES!
-                var dt = Date.parse(data[i].DateTime);
-                priceData[i] = [dt, data[i].Value];
-            }
-
-            var serie = {
-                name: "Historical Price",
-                color: '#CFCFCF',
-                data: priceData,
-                tooltip: {
-                    valueDecimals: 4
-                },
-                zIndex: 9
-            };
-
-            chart.addSeries(serie);
                 
-            loadForecast();
-        });
+    function dataSuccess(data) {
+        var priceData = [];
+        for (var i = 0; i < data.length; i++) {
+            //try using linq.js => YES!
+            var dt = Date.parse(data[i].DateTime);
+            priceData[i] = [dt, data[i].Value];
+        }
+
+        var serie = {
+            name: "Historical Price",
+            color: '#CFCFCF',
+            data: priceData,
+            tooltip: {
+                valueDecimals: 4
+            },
+            zIndex: 9
+        };
+
+        chart.addSeries(serie);
+        
+        $scope.ForecastSurfaceIframeUrl = "/Plotly/ProbabilitySurface?series=ElsSystem&bins=6&period=24&distributionType=empirical";
+
+        doPageParametersPost($scope, "Forecast");
     }
-            
-    function varChanged(newval, oldval) {
-        if (newval == oldval || newval == undefined || oldval == undefined)
-            return;
-
-        loadForecast();        
-    }
-
-    $scope.changeDropDownValue = function (dropdown, value) {
-        $scope[dropdown] = value;
-    }
-
-    //come up with an idea to have them global... yes...
-    function dateChanged(newval, oldval) {
-        var sameDay = areSameDates(newval, oldval);
-        if (sameDay) return;
-
-        loadForecast();
-    }
-
-    $scope.$watch('date', dateChanged);
-    $scope.$watch('forecastMethod', varChanged);
-    $scope.$watch('timeHorizon', varChanged);
-    $scope.$watch('confidence', varChanged);
-    $scope.$watch('exogenousVariables', varChanged);
-
+    
     /* Start all */
-    loadHistoricalData()
+    doPageParametersPost($scope, "Data");
 });

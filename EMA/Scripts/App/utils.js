@@ -1,4 +1,5 @@
-﻿function clearSeriesContainingName(highchart, seriesName) {
+﻿///When passed with empty seriesName "", clears all...
+function clearSeriesContainingName(highchart, seriesName) {
     if (highchart == undefined || highchart.series == undefined)
         return;
 
@@ -90,8 +91,10 @@ function areSameDates(d1, d2) {
 //partial parameters posts via frameId
 //if null posts all data...
 function doPageParametersPost($scope, frameId) {
-    if (frameId == undefined)
-        throw "Must have frame Id";
+    if (frameId == undefined) {
+        console.error("Must have frame Id, but will use current...");
+        frameId = $scope.currentFrameId;
+    }
     if ($scope.postUrl[frameId] == undefined)
         throw "No frame url"
     if ($scope.onChangedPostResponse[frameId] == undefined)
@@ -110,10 +113,14 @@ function doPageParametersPost($scope, frameId) {
 function registerParameter($scope, param, value) {
     $scope[param] = value;
 
-    if($scope.httpPostParameters == undefined)
+    if ($scope.httpPostParameters == undefined) {
+        //or consider a different setup...?
+        $scope.httpPostParameterFrame = [param];
         $scope.httpPostParameters = [param];
-    else
+    }
+    else {
         $scope.httpPostParameters.push(param);
+    }
     
     if (value.constructor == Date) {
         $scope.$watch(param, function dateChanged(newval, oldval) {
@@ -131,7 +138,10 @@ function registerParameter($scope, param, value) {
         });
     }
 
-    //just for fun
+    //set global scope variables... TODO: find a better place to set them...
+    $scope.extendWith = extendWith;
+    angular.extend($scope, SERVER_CONSTANTS);
+
     $scope.changeDropDownValue = function (dropdown, value) {
         $scope[dropdown] = value;
     }
