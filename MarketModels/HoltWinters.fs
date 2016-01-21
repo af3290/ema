@@ -43,9 +43,15 @@ module HoltWinters =
         
         y
 
+    type HoltWintersParams = {
+        alpha : float;
+        beta : float;
+        gamma : float;
+    }
+
     //TODO: fix, doesn't find the right parameters yet... but it will...
     ///finds the best paramters for HWT and returns them
-    let OptimizeTripleHWT (data : float[]) (seasonLength : int) (nbForecastSteps :int) : float[] =
+    let OptimizeTripleHWT (data : float[]) (seasonLength : int) (nbForecastSteps :int) : HoltWintersParams =
         
         let hwOptim = (fun alpha beta gamma -> 
             let res = TripleHWT data seasonLength nbForecastSteps alpha beta gamma
@@ -68,4 +74,8 @@ module HoltWinters =
         alglib.minbleicoptimize(state, optimFunc, null, null);
         alglib.minbleicresults(state, &values, &rep);
 
-        values
+        {
+            alpha = values.[0];
+            beta = values.[1];
+            gamma = values.[2];
+        }

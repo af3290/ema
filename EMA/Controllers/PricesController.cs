@@ -7,6 +7,7 @@ using System.Web.Mvc;
 using Utils;
 using JsonConvert = Newtonsoft.Json.JsonConvert;
 using static MarketModels.Types;
+using static MarketModels.Forecast;
 using EMA.Misc;
 using MarketModels;
 using Newtonsoft.Json.Linq;
@@ -104,14 +105,14 @@ namespace EMA.Controllers
         }
         
         [HttpPost]
-        public JsonResult Forecast(DateTime? date, string forecastMethod, 
+        public JsonResult Forecast(DateTime? date, string forecastMethod, string forecastModel,
             string timeHorizon, double confidence, string exogenousVariables)
         {            
             var dt = date.HasValue? date.Value:DateTime.Today; 
-            var ths = Types.GetUnionCaseNames<Types.TimeHorizon>();
+            var ths = GetUnionCaseNames<Types.TimeHorizon>();
 
             var forecastHorizon = Array.IndexOf(ths, timeHorizon); //TODO: finish here... yeah...
-
+            //TODO: do it later...
             if (forecastHorizon < 0)
                 throw new ArgumentException("Wrong argument");
 
@@ -127,49 +128,61 @@ namespace EMA.Controllers
             var data = d.Where(x => x.DateTime < dt)
                 .Select(x => x.Value != null ? (double)x.Value : 0) //0 for now, when interpolation is done... etc..
                 .ToArray();
-            
-            var halfYear = (int)Math.Floor((dt - dt.AddMonths(-6)).TotalHours);
-            
-            var allses = new int[] { halfYear, 24 * 7*4, 24 * 7, 24 };
+
             var th = GetTimeHorizonValue(forecastHorizon);
-            //we need always seasonalities > forecast horizon
-            var ses = allses.Where(s => s >= th).ToArray();
-
-            //add naive with exogenous variables next...
-            if(forecastMethod == "Naive")
-            {
-
-            } else if (forecastMethod == "HWT")
-            {
-
-            }
-            var forecast = MarketModels.Forecast.Naive(data, ses, th, 0.95);
-
-            var last3Month = data.Reverse().Take(24 * 7 * 4 * 3).Reverse().ToArray();
-            //var hwparams = HoltWinters.OptimizeTripleHWT(last3Month, 24, th);
-            //hwparams[0], hwparams[1], hwparams[2]
-            //var forecastVals = HoltWinters.TripleHWT(last3Month, 24, th, 0.5, 0.4, 0.6);
-            //remember it gives all back...
-            //forecastVals = forecastVals.Reverse().Take(th).Reverse().ToArray();
-            //confidences are empty... because HWT doesn't output them... yet...
-            //var forecast = new Forecast.ForecastResult(forecastVals, new double[,] { });
 
             var rlzd = d.Where(x => x.DateTime >= dt)
                 .Take(th)
                 .Select(x => x.Value != null ? (double)x.Value : 0) //0 for now, when interpolation is done... etc..                
                 .ToArray();
 
-            //var forecasted = forecast.Forecast.Take(rlzd.Length).ToArray();
-            var forecasted = forecast.Forecast.Reverse().Take(rlzd.Length).Reverse().ToArray();
+            ForecastResult forecast;
+            double[] forecasted;
+            object model;
 
-            Forecast.FitStatistics fit = null, bfit = null, pfit = null;
+            //add naive with exogenous variables next...
+            if (forecastMethod == "Naive")
+            {
+                var halfYear = (int)Math.Floor((dt - dt.AddMonths(-6)).TotalHours);
+                
+                var allses = new int[] { halfYear, 24 * 7 * 4, 24 * 7, 24 };
+                
+                //we need always seasonalities > forecast horizon
+                var ses = allses.Where(s => s >= th).ToArray();
+
+                forecast = Naive(data, ses, th, 0.95);
+
+                forecasted = forecast.Forecast.Take(rlzd.Length).ToArray();
+
+                model = new object();
+            }
+            else if (forecastMethod == "HWT")
+            {
+                var last3Month = data.Reverse().Take(24 * 7 * 4 * 3).Reverse().ToArray();
+                
+                var hwparams = HoltWinters.OptimizeTripleHWT(last3Month, 24, th);
+                //hwparams[0], hwparams[1], hwparams[2]
+                //TODO: pass forecastModel params in...
+                var forecastVals = HoltWinters.TripleHWT(last3Month, 24, th, 0.5, 0.4, 0.6);
+                //remember it gives all back...
+                forecastVals = forecastVals.Reverse().Take(th).Reverse().ToArray();
+                //confidences are empty... because HWT doesn't output them... yet...
+                forecast = new ForecastResult(forecastVals, new double[] { }, new double[,] { });
+                forecasted = forecast.Forecast.Reverse().Take(rlzd.Length).Reverse().ToArray();
+
+                model = hwparams;
+            }
+            else
+                throw new ArgumentException("Unsupported argument passed");
+                                    
+            FitStatistics fit = null, bfit = null, pfit = null;
 
             if (rlzd.Length > 0) {
-                fit = MarketModels.Forecast.ForecastFit(forecasted, rlzd);
-                pfit = MarketModels.Forecast.ForecastFit(
+                fit = ForecastFit(forecasted, rlzd);
+                pfit = ForecastFit(
                     GetSubPeriodsFrom(forecasted, 24, DAY_PEAK_HOURS), 
                     GetSubPeriodsFrom(rlzd, 24, DAY_PEAK_HOURS));
-                bfit = MarketModels.Forecast.ForecastFit(
+                bfit = ForecastFit(
                     GetSubPeriodsFrom(forecasted, 24, DAY_BASE_HOURS),
                     GetSubPeriodsFrom(rlzd, 24, DAY_BASE_HOURS));
             }
@@ -177,6 +190,7 @@ namespace EMA.Controllers
             var obj = new
             {                
                 Result = forecast,
+                MathModel = model,
                 DaysAhead = th / 24,
                 Fit = fit,
                 BaseFit = bfit, //refine later...

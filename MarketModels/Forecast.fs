@@ -9,36 +9,57 @@ module Forecast =
     type SpikePreprocess = None | SimilarDay | Limited
 
     type ForecastResult = {
-        Forecast : float[]
+        Forecast : float[];
+        //each pairs level, f.ex. 95%
+        ConfidenceLevels: float[];
+        //from highest to lowest prediction intervals
         Confidence : float[,] //because the inners have the same lengths! not array of arrays!
     }
+
+    (*
+        We have a nice scheme for confidence intervals... whenever an alpha is passed, do a logarithmic
+        lower and upper alphas to generate 3 intervals, without letting the user provide them individually.
+
+        alpha... alpha+/-25% from 1..100%
+
+		for example:
+			95% => 80%, 96%
+			90% => 60%, 92%...
+			and so on...
+    *)
+    let ConfidenceAlphaBounds (alpha : float) : float*float =
+        (alpha - 0.25 * alpha, alpha + 0.25 * (1.0 - alpha))
 
     ///Averages over all seasonalities provided and returns the average as the next period's forecast
     ///while the min and max represent confidence bands
     let Naive (data : float[]) (seasonalities : int[]) (forecastSteps : int) (alpha : float) : ForecastResult =
-        //data provided at starting of first largest season...???
-        //average from all seasonalities.. make some histogram... return 95%..
+        //assumes LogNormal distribution, so log all...
+        let logData = data |> Array.map (fun x -> log x)
         
-        let seasonalPeriods = 
-            Array2D.init seasonalities.Length forecastSteps (fun i j -> data.[data.Length - seasonalities.[i] + j])
+        //stack all previous periods (of forecastSteps length) for each seasonality provided together
+        //e.g. if day ahead, then each day starting with previous and ending to this day from last year
+        let seasonalPeriods =  Array2D.init seasonalities.Length forecastSteps (fun i j -> logData.[logData.Length - seasonalities.[i] + j])
 
-        let avg = Array.init forecastSteps (fun i -> seasonalPeriods.[*,i] |> Array.average)
+        //average those periods
+        let avg = Array.init forecastSteps (fun i -> seasonalPeriods.[*,i] |> mean)
+        
+        //find variations
+        let stdevs = Array.init forecastSteps (fun i -> seasonalPeriods.[*,i] |> stdev)
+        
+        let alphaBounds = ConfidenceAlphaBounds alpha
+        let stdNorm = new Normal()
+
+        let cis = [|fst alphaBounds; 0.95; snd alphaBounds|]
 
         let res = {
-                Forecast = avg;
-                Confidence = Array2D.init 2 forecastSteps (fun i j -> 
-                    if i = 0 
-                    then seasonalPeriods.[*,j] |> Array.max 
-                    else seasonalPeriods.[*,j] |> Array.min)
-            }
-
-        res
-
-    let NaiveMultivariate (data : float[]) (predictors : float[,])  (forecastSteps : int) (alpha : float) : ForecastResult =
-        
-        let res = {
-                Forecast = [| 0.0 |];
-                Confidence = Array2D.init 2 forecastSteps (fun i j -> 0.0)
+                Forecast = avg |> Array.map (fun x -> exp x);
+                ConfidenceLevels = cis;
+                Confidence = Array2D.init (cis.Length * 2) forecastSteps (fun i j -> 
+                    if i < cis.Length
+                    //go in inverse order through upper intervals, from highest to lowest
+                    then exp (avg.[j] + stdevs.[j] * stdNorm.InverseCumulativeDistribution(cis.[-i + cis.Length - 1])) 
+                    //go in direct order now
+                    else exp (avg.[j] - stdevs.[j] * stdNorm.InverseCumulativeDistribution(cis.[i % cis.Length])))
             }
 
         res
