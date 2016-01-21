@@ -15,7 +15,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>EMA</RootNamespace>
     <AssemblyName>EMA</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <MvcBuildViews>false</MvcBuildViews>
     <UseIISExpress>true</UseIISExpress>
     <IISExpressSSLPort />
@@ -25,6 +25,7 @@
     <UseGlobalApplicationHostFile />
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -34,6 +35,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -42,6 +44,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CodeDom.Providers.DotNetCompilerPlatform, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -51,6 +54,7 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
@@ -58,12 +62,9 @@
     <Reference Include="System.Web.Entity" />
     <Reference Include="System.Web.ApplicationServices" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Web" />
-    <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Web.Abstractions" />
+    <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Web.Routing" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Configuration" />
@@ -104,6 +105,7 @@
       <Private>True</Private>
       <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.Razor.dll</HintPath>
     </Reference>
+    <Reference Include="System.Xml.Linq" />
     <Reference Include="WebGrease">
       <Private>True</Private>
       <HintPath>..\packages\WebGrease.1.5.2\lib\WebGrease.dll</HintPath>
@@ -123,6 +125,7 @@
     <Compile Include="Controllers\RiskManagementController.cs" />
     <Compile Include="Controllers\SimulationsController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
+    <Compile Include="DomainModels\MathModel.cs" />
     <Compile Include="DomainModels\PlotlyJsonSurfaceCorrdinate.cs" />
     <Compile Include="Controllers\PricesController.cs" />
     <Compile Include="DomainModels\SurfaceCoordinate.cs" />
@@ -152,6 +155,7 @@
     <Content Include="Scripts\App\storageValuation.js" />
     <Content Include="Scripts\App\utils.js" />
     <Content Include="Scripts\index.js" />
+    <None Include="Properties\PublishProfiles\Profix.pubxml" />
     <None Include="Scripts\linq-vsdoc.js" />
     <Content Include="Scripts\linq.js" />
     <Content Include="Scripts\linq.min.js" />
@@ -178,7 +182,7 @@
     <Content Include="Views\EnergyMarkets\SpotPriceForecast.cshtml" />
     <Content Include="Views\EnergyMarkets\ForwardMarketAnalysis.cshtml" />
     <Content Include="Views\Components\ForecastFit.cshtml" />
-    <Content Include="Views\Components\ModelSummary.cshtml" />
+    <Content Include="Views\Components\MathModel.cshtml" />
     <Content Include="Views\RiskManagement\PlantPortfolio.cshtml" />
     <Content Include="Views\Components\DateTimePicker.cshtml" />
     <Content Include="Views\Components\DropDownList.cshtml" />
