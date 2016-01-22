@@ -5,6 +5,8 @@ module TimeSeries =
     open System
     open System.Collections.Generic    
     open Operations
+    open Optimization
+    open Forecast
     open MathNet.Numerics
     open MathNet.Numerics.Statistics
     open MathNet.Numerics.LinearAlgebra.Double
@@ -19,6 +21,7 @@ module TimeSeries =
         member this.Degree with get() = this.Lags |> Seq.last
 
     type ARMAResult = {
+        //always corresponding to as nbOfLags in increasing order
         AR : float[]; 
         MA : float[]; 
         Const : float; 
@@ -37,7 +40,7 @@ module TimeSeries =
 
         //parameters of the result to be determined
         let mutable AR = Array.init p (fun i -> 0.0)
-        let MA = Array.init q (fun i -> 0.0)
+        let mutable MA = Array.init q (fun i -> 0.0)
         let mutable Const = 0.0
         let mutable Var = 0.0
 
@@ -67,17 +70,19 @@ module TimeSeries =
             if ar.Degree = ar.Lags.Length then
                 //find AR coefficients using solving a linear system,                
                 let mutable rmatrixsolveRep : alglib.densesolverreport = null
+                //solve linear system
                 alglib.rmatrixsolve(C, C.GetLength(0), d, &rmatrixsolveInt, &rmatrixsolveRep, &AR)
             //has some 0 fixed lags
             else
                 //find AR coefficients using linear least squares...
-                let mutable rmatrixsolveRep : alglib.densesolverlsreport = null
-
+                //find missing lags fixed to 0, adjust to 0 index...
+                let fixedARsLags = Set.ofArray(Array.init (ar.Degree) (fun i -> i + 1)) - Set.ofArray(ar.Lags) |> Set.toArray               
                 //setup constraints
-
+                let beq = Array.init fixedARsLags.Length (fun i -> 0.0)
+                //adjust for 0 starting index...
+                let Aeq = Array2D.init fixedARsLags.Length ar.Degree (fun i j -> if j = (fixedARsLags.[i]-1) then 1.0 else 0.0)
                 //run solver
-                //alglib.lsfitlinearc(, C.GetLength(0), C.GetLength(1), d, 0.0,&rmatrixsolveInt, &rmatrixsolveRep, &AR) ... etc...                
-                alglib.rmatrixsolvels(C, C.GetLength(0), C.GetLength(1), d, 0.0,&rmatrixsolveInt, &rmatrixsolveRep, &AR)
+                AR <- ConstrainedLinearLeastSquares C d Aeq beq
 
             //where is polynomialsolve ...????
             //no need for stationarity test, since no state...
@@ -107,6 +112,7 @@ module TimeSeries =
             let mutable counter = 0
         
             let MA1 = Array.init q (fun i -> 1.0)
+            let fixedMAsLags = Set.ofArray(Array.init (ma.Degree) (fun i -> i + 1)) - Set.ofArray(ma.Lags) |> Set.toArray               
               
             //MA minimize change variance until a significant fit is found
             while (L2Norm (MA -- MA1) > tol && counter < 100) do
@@ -120,14 +126,18 @@ module TimeSeries =
 
                 //moving average coefficients estimation
                 for j in q - 1 .. -1 .. 0 do
-                    //no state, so no need to keep it, check it thoroughly... revise
-                    let maPart = if q = 1 then 0.0 else MA.[0..q-j-1] .* MA.[j..q-1] |> Array.sum
-
-                    //subsequent autocorrelations for each 
-                    MA.[j] <- c.[j+1] * 1.0 / variance - maPart
+                    //not a fixed lag
+                    if Array.IndexOf(fixedMAsLags, (j+1)) = - 1 then
+                        //no state, so no need to keep it, check it thoroughly... revise
+                        let maPart = if q = 1 then 0.0 else MA.[0..q-j-1] .* MA.[j..q-1] |> Array.sum
+                        //subsequent autocorrelations for each 
+                        MA.[j] <- c.[j+1] * 1.0 / variance - maPart
 
                 counter <- counter + 1
-                     
+            
+            //eliminate all fixed 0 lags from MA
+            MA <- Array.init ma.Lags.Length (fun i -> MA.[ma.Lags.[i]-1])
+                                             
             {
                 AR = AR;
                 MA = MA;
@@ -162,4 +172,9 @@ module TimeSeries =
         }
 
         ARMA series ar ma
+
+    ///Simple forecasting of an ARMA fit
+    let Forecast (series : float[]) (arma : ARMAResult) (forecastSteps : int): ForecastResult = 
+        ///etc...
+        series
 
