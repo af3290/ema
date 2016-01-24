@@ -112,25 +112,18 @@ function doPageParametersPost($scope, frameId) {
 //generic method
 function registerParameter($scope, param, value) {
     $scope[param] = value;
-
-    if ($scope.httpPostParameters == undefined) {
-        //or consider a different setup...?
-        $scope.httpPostParameterFrame = [param];
-        $scope.httpPostParameters = [param];
-    }
-    else {
-        $scope.httpPostParameters.push(param);
-    }
-    
+        
+    $scope.httpPostParameters.push(param);
+        
     if (value.constructor == Date) {
-        $scope.$watch(param, function dateChanged(newval, oldval) {
+        $scope.$watch(param, function (newval, oldval) {
             var sameDay = areSameDates(newval, oldval);
             if (sameDay) return;
 
             doPageParametersPost($scope);
         });
     } else if (value.constructor == Number || value.constructor == String) {
-        $scope.$watch(param, function dateChanged(newval, oldval) {
+        $scope.$watch(param, function (newval, oldval) {
             if (newval == oldval || newval == undefined || oldval == undefined)
             return;
 
@@ -140,6 +133,7 @@ function registerParameter($scope, param, value) {
 
     //set global scope variables... TODO: find a better place to set them...
     $scope.extendWith = extendWith;
+    $scope.extendWithAndListen = extendWithAndListen;
     angular.extend($scope, SERVER_CONSTANTS);
 
     $scope.changeDropDownValue = function (dropdown, value) {
@@ -150,5 +144,45 @@ function registerParameter($scope, param, value) {
 //Extends the angular scope with a child provided as a child from given object found by the given name
 function extendWith(name, object) {
     this[name] = {};
-    angular.extend(this[name], object[name]);
+    var obj = object[name];
+
+    angular.extend(this[name], obj);
+}
+
+//Extends the angular scope with a child provided as a child from given object found by the given name
+//and also watches it...
+function extendWithAndListen(name, object) {
+    var oldObj = this[name];
+
+    //if it already exists under the same structure, don't readd, do it only when we have a different object structure
+    if (oldObj != undefined && angular.equals(Object.keys(oldObj), Object.keys(object)))
+        return;
+
+    this[name] = {};
+    var obj = object[name];
+    
+    angular.extend(this[name], obj);
+
+    console.log("Watching child object, " + name);
+
+    $scope = this;
+
+    //deregister listener
+    if ($scope.objectWatchers[name] != undefined && $scope.objectWatchers[name].constructor == Function)
+        $scope.objectWatchers[name]();
+
+    //watch a whole object
+    var listener = this.$watch(name, function (newval, oldval) {
+        if (newval == oldval || newval == undefined || oldval == undefined || angular.equals(newval, oldval))
+            return;
+
+        console.log("Child object changed... ");
+
+        doPageParametersPost($scope);
+    }, true);
+
+    $scope.objectWatchers[name] = listener;
+    
+    if ($scope.httpPostParameters.indexOf(name) == -1)
+        $scope.httpPostParameters.push(name);
 }

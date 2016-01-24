@@ -9,16 +9,23 @@
     $scope.onChangedPostResponse = { "Data": dataSuccess, "Forecast": forecastSuccess };
 
     $scope.currentFrameId = "Forecast"; //all changes are posted there...
+    //prepare variables... put somewhere...
+    $scope.httpPostParameters = [];
+    $scope.objectWatchers = {};
+
     registerParameter($scope, 'date', new Date(2015, 7, 3));
     registerParameter($scope, 'forecastMethod', $scope.ForecastMethods[0]);
     registerParameter($scope, 'spikesPreprocessMethod', $scope.SpikesPreprocessMethods[0]);
     registerParameter($scope, 'timeHorizon', $scope.TimeHorizons[0]);
-    registerParameter($scope, 'confidence', 95);
+    registerParameter($scope, 'confidence', 0.60);
     registerParameter($scope, 'exogenousVariables', {});
     
     $scope.Currency = "€";
 
     var chart = $('#container').highcharts('StockChart', {
+        chart: {
+            zoomType: 'xy'
+        },
         tooltip: {
             valueDecimals: 4
         },
@@ -54,7 +61,7 @@
         var data = [];
         for (var j = 0; j < forecast.length; j++) {
             //TODO: fix the +2 error, GMT? or why?
-            data[j] = [dt + (j+2) * 3600000, forecast[j]];
+            data[j] = [dt + (j + 2) * TICKS_IN_HOUR, forecast[j]];
         }
                 
         var serie = {
@@ -105,20 +112,20 @@
                 enableMouseTracking: false
             };
 
-            chart.addSeries(serie);
+            //chart.addSeries(serie);
         }
 
         //starts from narrower to winder
         for (var i = 0; i < bandCount; i++) { 
             /* Add confidence bands areas */
             var cofidenceBandArea = {
-                name: 'Confidence Band ' + prcFrmt(dataObj.Result.ConfidenceLevels[i]) + ' %',
+                name: 'Confidence Band ' + prcFrmt(dataObj.Result.ConfidenceLevels[(bandCount - i - 1)]) + ' %',
                 data: confidenceBand[i],
                 type: 'arearange',
                 lineWidth: 0,
                 linkedTo: ':previous',
                 color: '#FF0000',
-                fillOpacity: 0.15 + (bandCount - i) * 0.1,
+                fillOpacity: 0.05 + (bandCount - i) * 0.05,
                 zIndex: (bandCount - i)
             };
 
@@ -137,7 +144,8 @@
         $scope.extendWith('Fit', dataObj);
         $scope.extendWith('BaseFit', dataObj);
         $scope.extendWith('PeakFit', dataObj);
-        $scope.extendWith('MathModel', dataObj);
+        $scope.extendWithAndListen('MathModel', dataObj);
+        
         blockUI.stop();
     }
                 
