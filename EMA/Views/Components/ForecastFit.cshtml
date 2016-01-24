@@ -1,32 +1,47 @@
 ﻿<h2>Summary</h2>
-<h3>Residuals</h3>
-Bias <span style="color:{{Bias > 25 ? "red":""}}">{{Bias | number: 2}}</span><br />
+<h3>Fit Statistics</h3>
 <table>
     <thead>
         <tr>
             <td></td>
+            <td>Value</td>
             <td>pValue</td>
         </tr>
     </thead>
     <tbody>
         <tr>
-            <td>Independent</td>
-            <td style="color:{{Bias > 25 ? "red":""}}"
-                data-toggle="tooltip" 
-                title="Whether residuals are independent based on autocorrelation">
-                {{ MAPE[1] | number: 2}}%
+            <td>Bias</td>
+            <td style="color:{{Fit.Bias > 25 ? "red":""}}">
+                {{Fit.Bias | number: 4}}
             </td>
         </tr>
         <tr>
-            <td>Normal</td>
-            <td style="color:{{Bias > 25 ? "red":""}}"
+            <td>R Squared</td>
+            <td style="color:{{Fit.Bias > 25 ? "red":""}}">
+                {{Fit.RSquared * 100 | number: 2}} %
+            </td>
+        </tr>
+        <tr>
+            <td>Independent?</td>
+            <td>{{Fit.IndependencePValue < 0.05 ? "Yes":"No"}}</td>
+            <td style="color:{{Fit.IndependencePValue > 0.05 ? "red":""}}"
+                data-toggle="tooltip" 
+                title="Whether residuals are independent based on autocorrelation">
+                {{ Fit.IndependencePValue | number: 4}}
+            </td>
+        </tr>
+        <tr>
+            <td>Normal?</td>
+            <td>{{Fit.NormalityPValue < 0.05 ? "Yes":"No"}}</td>
+            <td style="color:{{Fit.NormalityPValue < 0.05 ? "":"res"}}"
                 data-toggle="tooltip" 
                 title="Whether residuals are normally distributed (or according test)">
-                {{ MAPE[1] | number: 2}}%
+                {{ Fit.NormalityPValue | number: 4}}
             </td>
         </tr>
     </tbody>
 </table>
+<h3>Residuals Statistics</h3>
 <table>
     <thead>
         <tr>
@@ -38,28 +53,28 @@ Bias <span style="color:{{Bias > 25 ? "red":""}}">{{Bias | number: 2}}</span><br
     </thead>
     <tbody>
         <tr>
-            <td>Peak</td>
-            <td>
-                {{ MAPE[1] | number: 2}}%
-            </td>
+            <td rowspan="2" data-toggle="tooltip" 
+                title="Hours 6–10am, 4–8pm">Peak</td>
+            <td>{{ PeakFit.APE[0] | number: 2}} %</td>
+            <td>{{ PeakFit.APE[1] | number: 2}} %</td>
+            <td>{{ PeakFit.APE[2] | number: 2}} %</td>    
+        </tr>
+        <tr>            
+            <td>{{ PeakFit.RSE[0] | number: 2}} {{Currency}}</td>
+            <td>{{ PeakFit.RSE[1] | number: 2}} {{Currency}}</td>
+            <td>{{ PeakFit.RSE[2] | number: 2}} {{Currency}}</td>
         </tr>
         <tr>
-            <td>Offpeak</td>
-            <td>
-                {{ MAPE[1] | number: 2}}%
-            </td>
+            <td rowspan="2" data-toggle="tooltip" 
+                title="Rest of day">Base</td>
+            <td>{{ BaseFit.APE[0] | number: 2}} %</td>
+            <td>{{ BaseFit.APE[1] | number: 2}} %</td>
+            <td>{{ BaseFit.APE[2] | number: 2}} %</td>
         </tr>
         <tr>
-            <td>MAPE</td>
-            <td>{{ MAPE[0] | number: 2}}%</td>
-            <td>{{ MAPE[1] | number: 2}}%</td>
-            <td>{{ MAPE[2] | number: 2}}%</td>
-        </tr>
-        <tr>
-            <td>MSE</td>
-            <td>{{ MRE[0] | number: 2}} {{Currency}}</td>
-            <td>{{ MRE[1] | number: 2}} {{Currency}}</td>
-            <td>{{ MRE[2] | number: 2}} {{Currency}}</td>
+            <td>{{ BaseFit.RSE[0] | number: 2}} {{Currency}}</td>
+            <td>{{ BaseFit.RSE[1] | number: 2}} {{Currency}}</td>
+            <td>{{ BaseFit.RSE[2] | number: 2}} {{Currency}}</td>
         </tr>
     </tbody>
 </table>

@@ -22,12 +22,11 @@
 <div ng-controller="ForecastController">
     <div class="row">
         <div class="col-md-4">
-            <h2>Price Forecast</h2>
-            <p>
-                A simple forecasting demonstration of the multivariate models for houly price. It also provides the
-                ability to forecast in the historical period, thereby allowing for an easy evaluation of a model. 
-                As well as point forecast, interval forecasts are calculated and a probability distribution surface is displayed.
-            </p>
+            <h2><a data-toggle="modal" data-target="#demoDescription">Price Forecast</a></h2>
+            @*A simple forecasting demonstration of the multivariate models for houly price. It also provides the
+            ability to forecast in the historical period, thereby allowing for an easy evaluation of a model.
+            As well as point forecast, interval forecasts are calculated and a probability distribution surface is displayed.*@
+            <h3>Parameters</h3>
             <form class="form-horizontal">
                 <div class="form-group">
                     <label for="date-time-picker" class="control-label col-xs-4">Date</label>
@@ -67,20 +66,31 @@
                 </div>
                 @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
                                         { "Id", "confidence" }, { "Label", "Confidence (%)" } });}
-            </form>                   
+            </form>
+            <h3>Model Parameters</h3>
+            <form class="form-horizontal">
+                <div ng-repeat="(key, value) in MathModel" class="form-group">
+                    <label for="input-{{key}}" class="control-label col-xs-4">{{key}}</label>
+                    <div class="col-xs-8">
+                        <input id="input-{{key}}" type="text" class="form-control" 
+                                ng-model="MathModel[key]" value="{{value}}"
+                                ng-model-options="{ updateOn: 'blur'}"
+                                placeholder="1" style="width: 100px;">
+                    </div>
+                </div>
+            </form>                               
         </div>
         <div class="col-md-8">
             <h2>Result</h2>
             <div id="container" style="height: 400px; min-width: 310px"></div>
             <div id="model-details" class="row">
-                <div class="col-md-6">
-                    @Html.Partial("~/Views/Components/ModelSummary.cshtml")
+                <div class="col-md-6">                    
                     @Html.Partial("~/Views/Components/ForecastFit.cshtml")                    
                 </div>
-                @*<div class="col-md-8">
+                <div class="col-md-6">
                     <iframe id="MarketCurvesFrame" src="{{ForecastSurfaceIframeUrl}}"
                             style="width: 100%; height: 480px; border: 0;" frameBorder="0"></iframe>
-                </div>*@
+                </div>
             </div>                 
         </div>
     </div>
