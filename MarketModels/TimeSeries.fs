@@ -176,5 +176,11 @@ module TimeSeries =
     ///Simple forecasting of an ARMA fit
     let Forecast (series : float[]) (arma : ARMAResult) (forecastSteps : int): ForecastResult = 
         ///etc...
-        series
+        {
+            Forecast = [||];
+            //each pairs level, f.ex. 95%
+            ConfidenceLevels = [||];
+            //from highest to lowest prediction intervals
+            Confidence = array2D [|[||]|] //because the inners have the same lengths! not array of arrays!
+        }
 

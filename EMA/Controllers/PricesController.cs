@@ -8,6 +8,7 @@ using Utils;
 using JsonConvert = Newtonsoft.Json.JsonConvert;
 using static MarketModels.Types;
 using static MarketModels.Forecast;
+using static MarketModels.TimeSeries;
 using EMA.Misc;
 using MarketModels;
 using Newtonsoft.Json.Linq;
@@ -106,7 +107,7 @@ namespace EMA.Controllers
         
         [HttpPost]
         public JsonResult Forecast(DateTime? date, string forecastMethod, string forecastModel,
-            string timeHorizon, double confidence, string exogenousVariables)
+            string timeHorizon, double confidence, string MathModel, string exogenousVariables)
         {            
             var dt = date.HasValue? date.Value:DateTime.Today; 
             var ths = GetUnionCaseNames<Types.TimeHorizon>();
@@ -121,7 +122,7 @@ namespace EMA.Controllers
                 .Where(p => p.Value.ToString() == "True")
                 .Select(p => AppData.GetHistoricalSeries(p.Name + "_Hourly_All.json"))
                 .ToList();
-
+            
             //naive hardcoded for now...
             var d = AppData.GetHistoricalSeries("SystemPrice_Hourly_EUR.json");
             
@@ -144,13 +145,13 @@ namespace EMA.Controllers
             if (forecastMethod == "Naive")
             {
                 var halfYear = (int)Math.Floor((dt - dt.AddMonths(-6)).TotalHours);
-                
+
                 var allses = new int[] { halfYear, 24 * 7 * 4, 24 * 7, 24 };
-                
+
                 //we need always seasonalities > forecast horizon
                 var ses = allses.Where(s => s >= th).ToArray();
 
-                forecast = Naive(data, ses, th, 0.95);
+                forecast = Naive(data, ses, th, confidence);
 
                 forecasted = forecast.Forecast.Take(rlzd.Length).ToArray();
 
@@ -158,20 +159,25 @@ namespace EMA.Controllers
             }
             else if (forecastMethod == "HWT")
             {
-                var last3Month = data.Reverse().Take(24 * 7 * 4 * 3).Reverse().ToArray();
+                var last3Month = data.Reverse().Take(24 * 7 * 2).Reverse().ToArray();
+                var hwparams = JsonConvert.DeserializeObject<HoltWinters.HoltWintersParams>(MathModel);
+
+                //optimize if all seem to be wrong
+                if (hwparams.alpha == 0 || hwparams.beta == 0 || hwparams.gamma == 0)
+                    hwparams = HoltWinters.OptimizeTripleHWT(last3Month, 24, th);
                 
-                var hwparams = HoltWinters.OptimizeTripleHWT(last3Month, 24, th);
-                //hwparams[0], hwparams[1], hwparams[2]
-                //TODO: pass forecastModel params in...
-                var forecastVals = HoltWinters.TripleHWT(last3Month, 24, th, 0.5, 0.4, 0.6);
-                //remember it gives all back...
-                forecastVals = forecastVals.Reverse().Take(th).Reverse().ToArray();
-                //confidences are empty... because HWT doesn't output them... yet...
-                forecast = new ForecastResult(forecastVals, new double[] { }, new double[,] { });
-                forecasted = forecast.Forecast.Reverse().Take(rlzd.Length).Reverse().ToArray();
+                forecast = HoltWinters.TripleHWTWithPIs(last3Month, 24, th, hwparams, confidence);
+               
+                forecasted = forecast.Forecast.Take(rlzd.Length).ToArray();
 
                 model = hwparams;
             }
+            //else if (forecastMethod == "AR")
+            //{
+            //    var last3Month = data.Reverse().Take(24 * 7 * 4 * 3).Reverse().ToArray();
+
+            //    var arma = ARMASimple2(last3Month, new int[] { 1, 2, 24 }, new int[] { 24 });
+            //}
             else
                 throw new ArgumentException("Unsupported argument passed");
                                     

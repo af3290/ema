@@ -2,6 +2,8 @@
 
 module HoltWinters =
     open System
+    open Operations
+    open MathFunctions
     open Forecast
     
     ///Triple seasonal Holt Winters method, additive version (for multiplicative use use natural logarithm)
@@ -16,9 +18,10 @@ module HoltWinters =
         let secondPart = data.[seasonLength..2*seasonLength]
         let newLength = data.Length + nbForecastSteps
 
+        //the finaly output vector appended with the forecast data
         let Y = Array.init newLength (fun i -> if i < data.Length then data.[i] else 0.0)
 
-        //first values initialization
+        //first values initialization for component series: trend, season and sum
         let a = Array.init newLength (fun x -> 0.0)
         a.[0] <- Array.sum firstPart / (float)seasonLength
 
@@ -41,6 +44,10 @@ module HoltWinters =
             s.[i+1] <- gamma * (Y.[i] - a.[i] - b.[i]) + (1.0 - gamma) * s.[i]
             y.[i+1] <- a.[i + 1] + b.[i + 1] + s.[i + 1]
         
+        //last value
+        let i = Y.Length - 1
+        Y.[i] <- a.[i] + b.[i] + s.[i - nbForecastSteps]
+
         y
 
     type HoltWintersParams = {
@@ -49,8 +56,40 @@ module HoltWinters =
         gamma : float;
     }
 
+    let TripleHWTFromParams (data : float[]) (seasonLength : int) (nbForecastSteps :int) (hwparams : HoltWintersParams) : float[] =
+        TripleHWT data seasonLength nbForecastSteps hwparams.alpha hwparams.beta hwparams.gamma
+           
+    let TripleHWTWithPIs (data : float[]) (seasonLength : int) (nbForecastSteps :int) (hwparams : HoltWintersParams) (alpha : float) : ForecastResult =
+        let y = TripleHWT data seasonLength nbForecastSteps hwparams.alpha hwparams.beta hwparams.gamma
+
+        //logged residuals
+        let eps = data.[0..data.Length-1]  -- y.[0..data.Length-1] 
+        
+        let nPeriods = (data.Length/nbForecastSteps)
+
+        //kinda crappy... but OK for demo...
+        let seasonalPeriods =  Array2D.init nPeriods nbForecastSteps (fun i j -> eps.[i*nbForecastSteps+j])
+
+        //average those periods, log as well...
+        let avg = y.[y.Length - nbForecastSteps..y.Length-1] |> Array.map (fun x -> log x)
+        
+        //find variations of residuals
+        let stdevs = Array.init nbForecastSteps (fun i -> seasonalPeriods.[*,i] |> stdev)
+
+        //confidence alpha...
+        let alphaBounds = ConfidenceAlphaBounds alpha
+        let cis = [|fst alphaBounds; alpha; snd alphaBounds|]
+
+        let res = {
+                Forecast = y.[y.Length - nbForecastSteps..y.Length-1];
+                ConfidenceLevels = cis;
+                Confidence = NormalPredictionIntervals avg stdevs cis
+            }
+
+        res
+
     //TODO: fix, doesn't find the right parameters yet... but it will...
-    ///finds the best paramters for HWT and returns them
+    ///finds the best paramters for HWT and returns them, only on the main data...
     let OptimizeTripleHWT (data : float[]) (seasonLength : int) (nbForecastSteps :int) : HoltWintersParams =
         
         let hwOptim = (fun alpha beta gamma -> 

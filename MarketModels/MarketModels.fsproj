@@ -62,6 +62,7 @@
     <Compile Include="Forecast.fs" />
     <Compile Include="SolverExtensions.fs" />
     <Compile Include="MarketClearing.fs" />
+    <Compile Include="Optimization.fs" />
     <Compile Include="SolverModel.fs" />
     <Compile Include="GasValuation.fs" />
     <Compile Include="Preprocess.fs" />
