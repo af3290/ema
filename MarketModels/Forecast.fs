@@ -30,6 +30,22 @@ module Forecast =
     let ConfidenceAlphaBounds (alpha : float) : float*float =
         (alpha - 0.25 * alpha, alpha + 0.25 * (1.0 - alpha))
 
+    ///Increasing order of alpha...
+    let NormalPredictionIntervals (avg : float[]) (stdevs : float[]) (alphas : float[]) : float[,] =
+        if avg.Length <> stdevs.Length then
+            failwith "Can't do it"
+
+        let stdNorm = new Normal()
+
+        Array2D.init (alphas.Length * 2) avg.Length (fun i j -> 
+            if i < alphas.Length
+            //go in inverse order through upper intervals, from highest to lowest
+            then exp (avg.[j] + stdevs.[j] * stdNorm.InverseCumulativeDistribution(alphas.[-i + alphas.Length - 1])) 
+            //go in direct order now
+            else exp (avg.[j] - stdevs.[j] * stdNorm.InverseCumulativeDistribution(alphas.[i % alphas.Length]))
+        )       
+
+
     ///Averages over all seasonalities provided and returns the average as the next period's forecast
     ///while the min and max represent confidence bands
     let Naive (data : float[]) (seasonalities : int[]) (forecastSteps : int) (alpha : float) : ForecastResult =
@@ -47,21 +63,13 @@ module Forecast =
         let stdevs = Array.init forecastSteps (fun i -> seasonalPeriods.[*,i] |> stdev)
         
         let alphaBounds = ConfidenceAlphaBounds alpha
-        let stdNorm = new Normal()
-
-        let cis = [|fst alphaBounds; 0.95; snd alphaBounds|]
+        let cis = [|fst alphaBounds; alpha; snd alphaBounds|]
 
         let res = {
                 Forecast = avg |> Array.map (fun x -> exp x);
                 ConfidenceLevels = cis;
-                Confidence = Array2D.init (cis.Length * 2) forecastSteps (fun i j -> 
-                    if i < cis.Length
-                    //go in inverse order through upper intervals, from highest to lowest
-                    then exp (avg.[j] + stdevs.[j] * stdNorm.InverseCumulativeDistribution(cis.[-i + cis.Length - 1])) 
-                    //go in direct order now
-                    else exp (avg.[j] - stdevs.[j] * stdNorm.InverseCumulativeDistribution(cis.[i % cis.Length])))
+                Confidence = NormalPredictionIntervals avg stdevs cis
             }
-
         res
 
     ///Shorthand version from given
