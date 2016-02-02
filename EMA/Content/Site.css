@@ -3,8 +3,9 @@
 }
 
 body {
-    padding-top: 50px;
-    padding-bottom: 20px;
+    padding-top: 30px;
+    padding-bottom: 20px;    
+    background: #f1f3f6;
 }
 
 /* Set padding to keep content from hitting the edges */
@@ -33,4 +34,53 @@ textarea {
 
 .modal-dialog {
     width: 800px;
+}
+
+.navbar{
+    min-height: 20px; 
+}
+.navbar-brand{
+    height: 20px;
+}
+.navbar-header{
+    height: 21px;
+}
+.navbar-brand{
+    padding: 0px 15px;
+}
+
+.navbar-nav > li > a {
+    padding-top: 2px;
+    padding-bottom: 0px;
+}
+
+.form-group {
+    margin-bottom: 5px;
+}
+
+.panel{
+    background: #fff;
+    border: 1px solid #e4e5e7;
+    border-radius: 2px;
+    padding: 5px 15px;
+}
+
+.panel-header{
+    border: 1px solid #e4e5e7;
+    border-bottom: none;
+    background: #f7f9fa;
+    padding: 0px 15px;
+}
+
+h2{font-size: 20px;}
+h3{font-size: 15px;}
+
+.h1, .h2, .h3, h1, h2, h3 {
+    margin-top: 10px;
+    padding-bottom: 5px;
+    margin-bottom: 0px;
+}
+
+h2 a {
+    cursor: pointer;
 }

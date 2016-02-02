@@ -1,0 +1,14 @@
+﻿<h3>Model</h3>
+<p>
+    The naive model assumes only deterministic properties at the respective seasonal lags.
+    It is deterministic and has no optimized parameters.
+</p>
+<form class="form-horizontal" style="display:{{ forecastMethod == 'HWT' ? '' : 'none'}}">
+    <h3>Triple Seasonal Holt Winter's method</h3>
+    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                        { "Id", "alpha" }, { "Label", "Alpha (%)" } });}
+    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                        { "Id", "beta" }, { "Label", "Beta (%)" } });}
+    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                        { "Id", "gamma" }, { "Label", "Gamma (%)" } });}
+</form>

@@ -1,4 +1,7 @@
-﻿<div class="dropdown" style="margin: 0px 0px 0px 0px;">
+﻿<div class="dropdown" style="margin: 0px 0px 0px 0px;" 
+    data-toggle="@(ViewData["Tooltip"]!=null && !string.IsNullOrEmpty(ViewData["Tooltip"].ToString()) ? "tooltip" : "")"
+    data-placement="right" 
+    title="@ViewData["Tooltip"]">
     <button class="btn btn-default dropdown-toggle" type="button" id="@ViewData["Id"]" data-toggle="dropdown">
         {{@ViewData["SelectedValue"]}}
         <span class="caret"></span>

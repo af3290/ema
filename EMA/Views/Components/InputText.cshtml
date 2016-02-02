@@ -6,11 +6,14 @@
 }
 
 <div class="form-group">
-    <label for="@ViewData["Id"]" class="control-label col-xs-4">@ViewData["Label"]</label>
-    <div class="col-xs-8">
+    <label for="@ViewData["Id"]" class="control-label col-xs-6">@ViewData["Label"]</label>
+    <div class="col-xs-6">
         @*Default values are preset in controllers!*@
         <input id="@ViewData["Id"]" type="text" class="form-control" 
                ng-model="@ViewData["ModelName"]"
-               placeholder="1" style="width: 60px;">
+               placeholder="1" style="width: 60px;"
+               data-toggle="@(ViewData["Tooltip"]!=null && !string.IsNullOrEmpty(ViewData["Tooltip"].ToString()) ? "tooltip" : "")"
+               data-placement="right" 
+               title="@ViewData["Tooltip"]">
     </div>
 </div>

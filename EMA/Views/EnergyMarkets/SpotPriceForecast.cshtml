@@ -5,7 +5,9 @@
 }
 
 <style>
-    #model-details table {width:100%;}
+    #model-details table {
+        width: 100%;
+    }
 </style>
 
 <script>
@@ -22,76 +24,181 @@
 <div ng-controller="ForecastController">
     <div class="row">
         <div class="col-md-4">
-            <h2><a data-toggle="modal" data-target="#demoDescription">Price Forecast</a></h2>
-            @*A simple forecasting demonstration of the multivariate models for houly price. It also provides the
-            ability to forecast in the historical period, thereby allowing for an easy evaluation of a model.
-            As well as point forecast, interval forecasts are calculated and a probability distribution surface is displayed.*@
-            <h3>Parameters</h3>
-            <form class="form-horizontal">
-                <div class="form-group">
-                    <label for="date-time-picker" class="control-label col-xs-4">Date</label>
-                    <div class="col-xs-8">
-                        @{Html.RenderPartial("~/Views/Components/DateTimePicker.cshtml", null, new ViewDataDictionary(){
-                                        { "Id", "date-picker" }, { "ModelName", "date" },
-                                        { "MinDate", new DateTime(2012,1,1) } });}
+            <div class="panel-header">
+                <h2><a data-toggle="modal" data-target="#demoDescription">Price Forecast</a></h2>
+            </div>
+            <div class="panel">
+                <h3>Parameters</h3>
+                <form class="form-horizontal">
+                    <div class="form-group">
+                        <label for="date-time-picker" class="control-label col-xs-6">Date</label>
+                        <div class="col-xs-6">
+                            @{Html.RenderPartial("~/Views/Components/DateTimePicker.cshtml", null, new ViewDataDictionary(){
+                                            { "Id", "date-picker" }, { "ModelName", "date" },
+                                            { "MinDate", new DateTime(2012,1,1) } });}
+                        </div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="menu-fm" class="control-label col-xs-4">Forecast Method</label>
-                    <div class="col-xs-8">
-                        @{Html.RenderPartial("~/Views/Components/DropDownList.cshtml", null, new ViewDataDictionary(){
-                              { "Id", "menu-fm" } , { "ModelName", "ForecastMethods" }, { "SelectedValue", "forecastMethod" } });}
+                    <div class="form-group">
+                        <label for="menu-fm" class="control-label col-xs-6">Forecast Method</label>
+                        <div class="col-xs-6">
+                            @{Html.RenderPartial("~/Views/Components/DropDownList.cshtml", null, new ViewDataDictionary(){
+                                  { "Id", "menu-fm" } , { "ModelName", "ForecastMethods" }, { "SelectedValue", "forecastMethod" } });}
+                        </div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="menu-sp" class="control-label col-xs-4">Spikes Preprocess</label>
-                    <div class="col-xs-8">
-                        @{Html.RenderPartial("~/Views/Components/DropDownList.cshtml", null, new ViewDataDictionary(){
-                              { "Id", "menu-sp" } , { "ModelName", "SpikesPreprocessMethods" }, { "SelectedValue", "spikesPreprocessMethod" } });}
+                    <div class="form-group">
+                        <label for="menu-sp" class="control-label col-xs-6">Spikes Preprocess</label>
+                        <div class="col-xs-6">
+                            @{Html.RenderPartial("~/Views/Components/DropDownList.cshtml", null, new ViewDataDictionary(){
+                                  { "Id", "menu-sp" } , { "ModelName", "SpikesPreprocessMethods" }, { "SelectedValue", "spikesPreprocessMethod" } });}
+                        </div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="menu-ev" class="control-label col-xs-4">Exogenous Variables</label>
-                    <div class="col-xs-8">
-                        @{Html.RenderPartial("~/Views/Components/SelectionList.cshtml", null, new ViewDataDictionary(){
-                              { "Id", "menu-ev" } , { "ModelName", "ExogenousVariables" }, { "SelectedValues", "exogenousVariables" } });}
+                    <div class="form-group">
+                        <label for="menu-ev" class="control-label col-xs-6">Exogenous Variables</label>
+                        <div class="col-xs-6">
+                            @{Html.RenderPartial("~/Views/Components/SelectionList.cshtml", null, new ViewDataDictionary(){
+                                  { "Id", "menu-ev" } , { "ModelName", "ExogenousVariables" }, { "SelectedValues", "exogenousVariables" } });}
+                        </div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="menu-th" class="control-label col-xs-4">Time Horizon</label>
-                    <div class="col-xs-8">
-                        @{Html.RenderPartial("~/Views/Components/DropDownList.cshtml", null, new ViewDataDictionary(){
-                              { "Id", "menu-th" } , { "ModelName", "TimeHorizons" }, { "SelectedValue", "timeHorizon" } });}
+                    <div class="form-group">
+                        <label for="menu-th" class="control-label col-xs-6">Time Horizon</label>
+                        <div class="col-xs-6">
+                            @{Html.RenderPartial("~/Views/Components/DropDownList.cshtml", null, new ViewDataDictionary(){
+                                  { "Id", "menu-th" } , { "ModelName", "TimeHorizons" }, { "SelectedValue", "timeHorizon" } });}
+                        </div>
                     </div>
-                </div>
-                @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
-                                        { "Id", "confidence" }, { "Label", "Confidence (%)" } });}
-            </form>
-            <h3>Model Parameters</h3>
-            <form class="form-horizontal">
-                <div ng-repeat="(key, value) in MathModel" class="form-group">
-                    <label for="input-{{key}}" class="control-label col-xs-4">{{key}}</label>
-                    <div class="col-xs-8">
-                        <input id="input-{{key}}" type="text" class="form-control" 
-                                ng-model="MathModel[key]" value="{{value}}"
-                                ng-model-options="{ updateOn: 'blur'}"
-                                placeholder="1" style="width: 100px;">
+                    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                            { "Id", "confidence" }, { "Label", "Confidence (%)" } });}
+                </form>
+                <h3>Model Parameters</h3>
+                <form class="form-horizontal">
+                    <div ng-repeat="(key, value) in MathModel" class="form-group">
+                        <label for="input-{{key}}" class="control-label col-xs-6">{{key}}</label>
+                        <div class="col-xs-6">
+                            <input id="input-{{key}}" type="text" class="form-control"
+                                   ng-model="MathModel[key]" value="{{value}}"
+                                   ng-model-options="{ updateOn: 'blur'}"
+                                   placeholder="1" style="width: 100px;">
+                        </div>
                     </div>
-                </div>
-            </form>                               
+                </form>
+            </div>
         </div>
         <div class="col-md-8">
-            <h2>Result</h2>
-            <div id="container" style="height: 400px; min-width: 310px"></div>
-            <div id="model-details" class="row">
-                <div class="col-md-6">                    
-                    @Html.Partial("~/Views/Components/ForecastFit.cshtml")                    
+            <div class="panel-header">
+                <h2>Result</h2>
+            </div>
+            <div class="panel">
+                <div id="container" style="height: 400px; min-width: 310px"></div>
+                <div id="model-details" class="row">
+                    <div class="col-md-6">
+                        @Html.Partial("~/Views/Components/ForecastFit.cshtml")
+                    </div>
+                    <div class="col-md-6">
+                        <iframe id="MarketCurvesFrame" src="{{ForecastSurfaceIframeUrl}}"
+                                style="width: 100%; height: 480px; border: 0;" frameBorder="0"></iframe>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <iframe id="MarketCurvesFrame" src="{{ForecastSurfaceIframeUrl}}"
-                            style="width: 100%; height: 480px; border: 0;" frameBorder="0"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="demoDescription" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h2 class="modal-title" id="myModalLabel">Price Forecasting Demo Description</h2>
+            </div>
+            <div class="modal-body">
+                <p>
+                    A simple forecasting demonstration of various common models for houly price. It provides the
+                    ability to forecast in the historical period, thereby allowing for an easy evaluation of a model, also shows the backcasting data.
+                    As well as point forecast, interval forecasts are calculated and other relevant statistics are shown (P Values, etc...).
+                </p>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p>
+                            Very important to observe are the characterstics of electricity price...
+                            1. strong seasonalities...
+                            2. spikes...
+                        </p>
+                    </div>
+                    <div class="col-md-8">
+                        <img src="~/Content/Images/curvesIntersection.png" style="width: 480px;" />
+                    </div>
                 </div>
-            </div>                 
+                <h2>Forecast Methods</h2>
+                <p>Choice of methods is based on simplicity and conceptual accessibility. Those methods are adapted 
+                   from research literature and presented for comparison purposes. Besides the naive method, all other support
+                   inclusion of exogenous varaibles</p>
+                <h3>1. Naive</h3>
+                <p>
+                    As a benchmarking method the naive approach is take
+                </p>
+                <h3>2. Holt Winters</h3>
+                <p>
+
+                </p>
+                <h3>3. Autoregressive Moving Average</h3>
+                <p>
+                    Full specification of a model looks like...
+                </p>
+                <h2>Multivariate regression</h2>
+                <p>Exogenous variables are included...</p>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p>
+                            
+                        </p>
+                    </div>
+                    <div class="col-md-8">
+                        <img src="~/Content/Images/curvesIntersection.png" style="width: 480px;" />
+                    </div>
+                </div>
+               
+                <hr />
+
+                <h3>Sensitivities</h3>
+                <p>
+                    Of significant importance in microeconomics is to find price sensitivities, in this case the demand is a
+                    very inelastic variable, while the supply is more elastic. Those values are found either throw line intersection
+                    slopes or through linear programming sensitivities. The can be defined as follows:
+                </p>
+                <div class="tex2jax_process" style="">
+                    $$ \text{E}_q = \frac{\text{P}_i - \text{P}_{i-1}}{\text{Q}_i - \text{Q}_{i-1}}  $$
+                    $$ \text{E}_q \text{ - elasticity of quantity }  $$
+                    $$ \text{i} \text{ - the equilibrium index}  $$
+                    $$ \text{Sensitivity}_{q}(Q_i\pm\text{x%}) =  \text{E}_{q}*\pm\text{x%} $$
+                    $$ x \ \text{ - the required % change in quantity}  $$
+                </div>
+                <hr />
+
+                <h3>Limitations</h3>
+                1. Multiple regimes or heteroskedasticity concerns are ignored.<br />
+                2. Outages and other short term constraints are not included. <br />
+                3. Area prices and other relevant variables (such as flow constraints or exchange rates) are ignored. <br />
+                <hr />
+
+                <h3>References</h3>
+                Weron, R., Misiorek, A. Forecasting spot electricity prices: A comparison of
+                parametric and semiparametric time series models. International Journal of Forecasting. October
+                2008, Vol. 24.
+                <br />
+                Taylor, J.W. (2003) Short-term electricity demand forecasting using double seasonal exponential
+                smoothing, Journal of Operational Research Society 54, 799–805.
+                <br />
+                Winters, P. R. (April 1960) Forecasting Sales by Exponentially Weighted Moving Averages", 
+                Management Science 
+                <br />
+                Box, G. E. P., G. M. Jenkins, and G. C. Reinsel. Time Series
+                Analysis: Forecasting and Control. 3rd edition. Upper Saddle River,
+                NJ: Prentice-Hall, 1994.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
