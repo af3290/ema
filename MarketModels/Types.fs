@@ -12,11 +12,16 @@ module Types =
 
     type SettlementMethod = PayAsBid | UniformPricing
 
-    type ForecastMethod = Naive | HWT | AR | ARX | ARwGARCH | ARXwGARCH 
+    type ForecastMethod = Naive | HoltWinters | AutoregressiveMovingAverage
 
     type Resolution = Yearly | Quarterly | Monthly | Weekly | Daily | Hourly
 
     type TimeHorizon = DayAhead | WeekAhead | MonthAhead | QuarterAhead | YearAhead
+
+        //CONSTANTS...
+    let DAY_PEAK_HOURS = [seq { 6..10 }; seq { 16..20 }] |> Seq.concat |> Seq.toArray
+
+    let DAY_BASE_HOURS = [seq { 0..5 }; seq { 11..15 }; seq { 21..23 }] |> Seq.concat |> Seq.toArray
 
     let GetTimeHorizonValue (ithTimeHorizon:int) = 
         match ithTimeHorizon with
@@ -34,10 +39,10 @@ module Types =
     let GetUnionCaseNames<'ty> () = 
         FSharpType.GetUnionCases(typeof<'ty>) |> Array.map (fun info -> info.Name)
 
-    //CONSTANTS...
-    let DAY_PEAK_HOURS = [seq { 6..10 }; seq { 16..20 }] |> Seq.concat |> Seq.toArray
-
-    let DAY_BASE_HOURS = [seq { 0..5 }; seq { 11..15 }; seq { 21..23 }] |> Seq.concat |> Seq.toArray
+    ///Returns the equivalent union from its name, throws exception if not found...
+    let GetUnionCaseFromName<'ty> (name : string) = 
+        let unionCase = FSharpType.GetUnionCases typeof<'ty> |> Array.find (fun case -> case.Name = name)
+        FSharpValue.MakeUnion(unionCase,[||]) :?> 'ty
     
     ///May leave aside extra data that doesn't fit in a day
     ///sub periods must be defined in increasing order and well bounded

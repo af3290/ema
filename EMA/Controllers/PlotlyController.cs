@@ -8,6 +8,7 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using Utils;
+using static MarketModels.Types;
 using static MarketModels.MathFunctions;
 
 namespace EMA.Controllers
@@ -19,8 +20,13 @@ namespace EMA.Controllers
         {
             var dt = date.HasValue ? date.Value : DateTime.Today;
             var curves = AppData.GetNordpoolMarketCurves(dt);
-
-            curves.ForEach(c => c.Sensitivity.PercentageChange = sensitivityChangePercentage);
+        
+            curves.ForEach(c => {
+                c.EqulibriumAlgorithm = GetUnionCaseFromName<EquilibriumAlgorithm>(EquilibriumAlgorithm);
+                c.EquilibriumFill = GetUnionCaseFromName<EquilibriumFill>(EquilibriumFill);
+                c.CalculateEquilibrium();
+                c.Sensitivity.PercentageChange = sensitivityChangePercentage;
+            });
 
             /* Need to reverse to match the plotly structure*/
             //curves.Reverse();

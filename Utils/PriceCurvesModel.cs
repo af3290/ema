@@ -3,20 +3,37 @@ using System.Collections.Generic;
 using System.Linq;
 using MarketModels;
 using static MarketModels.Types;
+using Newtonsoft.Json;
 
 namespace Utils
 {
     public class PriceCurvesModel
     {
         private MarketPoint _equilibrium;
+
+        private EquilibriumAlgorithm _eqlibriumAlgorithm;
+        private EquilibriumFill _eqlibriumFill;
+
         private PriceCurvesSensitivity _pcs;
 
         public PriceCurvesModel()
         {
             DemandCurve = new List<MarketPoint>();
             SupplyCurve = new List<MarketPoint>();
+
+            _eqlibriumAlgorithm = EquilibriumAlgorithm.CurveIntersection;
+            _eqlibriumFill = EquilibriumFill.Demand;
         }
 
+        [JsonIgnore]
+        public EquilibriumAlgorithm EqulibriumAlgorithm { get { return _eqlibriumAlgorithm; } set { _eqlibriumAlgorithm = value; } }
+
+        [JsonIgnore]
+        public EquilibriumFill EquilibriumFill { get { return _eqlibriumFill; } set { _eqlibriumFill = value; } }
+
+        /// <summary>
+        /// Hour for which the curves are represented
+        /// </summary>
         public int Hour;
 
         /// <summary>
@@ -80,12 +97,13 @@ namespace Utils
             
             try {
                 /* Run equilibrium procedure */
-                //better version: LP program
-                //=> has a very odd shaping for peak hours... WHY?
-                //CalculateEquilibriumLP(subDemandCurve, subSupplyCurve);
-
-                //considerably less work, but still inefficient
-                CalculateEquilibriumBruteForce(subDemandCurve, subSupplyCurve);
+                if (_eqlibriumAlgorithm == EquilibriumAlgorithm.CurveIntersection)
+                    //naive inefficient method
+                    CalculateEquilibriumBruteForce(subDemandCurve, subSupplyCurve);
+                else if (_eqlibriumAlgorithm == EquilibriumAlgorithm.WelfareMaximization)
+                    //the main approached used in the literature
+                    CalculateEquilibriumLP(subDemandCurve, subSupplyCurve);
+                
             } catch(Exception ex) {
                 //log it..
                 
