@@ -3,8 +3,12 @@ function clearSeriesContainingName(highchart, seriesName) {
     if (highchart == undefined || highchart.series == undefined)
         return;
 
-    for (var i = 0; i < highchart.series.length; i++) {
-        if (highchart.series[i].name.indexOf(seriesName) !== -1)
+    //local copy of length, since the series array will resize...
+    var len = highchart.series.length;
+
+    //remove decreasingly, since the series array will resize as items are removed and that results in failing to remove some...
+    for (var i = len-1; i >= 0; i--) {
+        if (highchart.series[i] != undefined && highchart.series[i].name.indexOf(seriesName) !== -1)
             highchart.series[i].remove();
     }
 }

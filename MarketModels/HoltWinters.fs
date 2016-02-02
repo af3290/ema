@@ -62,6 +62,10 @@ module HoltWinters =
     let TripleHWTWithPIs (data : float[]) (seasonLength : int) (nbForecastSteps :int) (hwparams : HoltWintersParams) (alpha : float) : ForecastResult =
         let y = TripleHWT data seasonLength nbForecastSteps hwparams.alpha hwparams.beta hwparams.gamma
 
+        //simple correction, skip the first 5 points... why? maybe because of the initial parameter estimation?... WHY?
+        //y.[y.Length - nbForecastSteps..y.Length-6] <- y.[y.Length - nbForecastSteps+5..y.Length-1]
+        //then fill the extra with some re estimated data...
+
         //logged residuals
         let eps = data.[0..data.Length-1]  -- y.[0..data.Length-1] 
         
@@ -81,6 +85,7 @@ module HoltWinters =
         let cis = [|fst alphaBounds; alpha; snd alphaBounds|]
 
         let res = {
+                Backcast = y.[0..y.Length - nbForecastSteps-1];
                 Forecast = y.[y.Length - nbForecastSteps..y.Length-1];
                 ConfidenceLevels = cis;
                 Confidence = NormalPredictionIntervals avg stdevs cis

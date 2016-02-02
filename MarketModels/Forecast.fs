@@ -9,6 +9,9 @@ module Forecast =
     type SpikePreprocess = None | SimilarDay | Limited
 
     type ForecastResult = {
+        //the resulting data from estimated parameters for the provided in-sample data, kinda "backcasting"
+        Backcast : float[];
+        //the n steps ahead prediced values from the estimated parameters
         Forecast : float[];
         //each pairs level, f.ex. 95%
         ConfidenceLevels: float[];
@@ -66,6 +69,7 @@ module Forecast =
         let cis = [|fst alphaBounds; alpha; snd alphaBounds|]
 
         let res = {
+                Backcast = [||];
                 Forecast = avg |> Array.map (fun x -> exp x);
                 ConfidenceLevels = cis;
                 Confidence = NormalPredictionIntervals avg stdevs cis
@@ -97,7 +101,8 @@ module Forecast =
         let ressd = Statistics.StandardDeviation residuals
         let resm = Statistics.Mean residuals
 
-        let prcErrs = residuals./realized |> Array.map abs
+        //return % value
+        let prcErrs = residuals./realized |> Array.map (fun x -> abs 100.0*x)
         let sqErrs = residuals ^^ 2.0
         
         let mutable normalityPValue = 0.0
