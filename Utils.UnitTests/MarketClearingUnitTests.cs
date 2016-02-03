@@ -9,7 +9,7 @@ using MarketModels;
 namespace Utils.UnitTests
 {
     [TestClass]
-    public class UnitTest3
+    public class MarketClearingUnitTests
     {
         [TestMethod]
         public void MarketClearingTest_SupplyFirstMiddle()

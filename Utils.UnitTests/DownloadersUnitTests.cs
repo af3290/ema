@@ -8,7 +8,7 @@ using static MarketModels.Types;
 namespace Utils.UnitTests
 {
     [TestClass]
-    public class UnitTest2
+    public class DownloadersUnitTests
     {
         private DateTime FromYear(int year) { return new DateTime(year, 1, 1); }
         //TODO: download files, convert to json, build day-ahead price forecasting! AWESOME POSSUM! really cool stuff...
@@ -58,9 +58,9 @@ namespace Utils.UnitTests
             path = nd.DownloadFile(DataItem.Elspot_Prices, Resolution.Hourly, FromYear(2015), Currency.EUR);
             */
 
-            path = nd.DownloadFile(DataItem.Elspot_Capacities, Resolution.Hourly, FromYear(2013), Currency.EUR);
-            path = nd.DownloadFile(DataItem.Elspot_Capacities, Resolution.Hourly, FromYear(2014), Currency.EUR);
-            path = nd.DownloadFile(DataItem.Elspot_Capacities, Resolution.Hourly, FromYear(2015), Currency.EUR);
+            path = nd.DownloadFile(DataItem.Elspot_Capacities, Resolution.Hourly, FromYear(2013));
+            path = nd.DownloadFile(DataItem.Elspot_Capacities, Resolution.Hourly, FromYear(2014));
+            path = nd.DownloadFile(DataItem.Elspot_Capacities, Resolution.Hourly, FromYear(2015));
         }
 
         [TestMethod]

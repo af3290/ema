@@ -10,7 +10,7 @@ using static MarketModels.Tests.TimeSeriesTests;
 namespace Utils.UnitTests
 {
     [TestClass]
-    public class TimeSeries
+    public class TimeSeriesUnitTests
     {
         [TestMethod]
         public void HWTTest1()
@@ -81,13 +81,15 @@ namespace Utils.UnitTests
         [TestMethod]
         public void ARMA()
         {
-            var ts = new TimeSeriesUnitTests();
+            var ts = new MarketModels.Tests.TimeSeriesTests.TimeSeriesUnitTests();
 
-            //ts.TestFloatingPointErrorsVsMatlab();
-            //ts.FilterTest2();
+            ////ts.TestFloatingPointErrorsVsMatlab();
+            ////ts.FilterTest2();
 
-            //ts.ARMATest1();
-            ts.ARMATestLongerLags();
+            ////ts.ARMATest1();
+            ////ts.OptimTest1();
+            //ts.ARMATestLongerLags();
+            ts.ARMAForecastSpecifiedModel();
         }
     }
 
