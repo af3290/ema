@@ -8,6 +8,14 @@ module MathFunctions =
     open MathNet.Numerics.Distributions
     
     ///Shorthands for those long Array methods...
+    
+    ///Old boring arrays sum
+    let sum (vec : float[]) : float =
+        vec |> Array.sum
+
+    ///Retrieves a new array formed by all the values at the specified indices
+    let sub (vec : float[]) (indices : int[]) : float[] =
+        Array.init indices.Length (fun i -> vec.[indices.[i]])
 
     ///Old boring mean...
     let mean (vec : float[]) : float =

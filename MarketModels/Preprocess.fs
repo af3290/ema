@@ -23,3 +23,15 @@ module Preprocess =
 
     let InterpolateOutliers (series : float[]) : float[] =
         series
+
+    let CapSeries(series : float[], ub : float, lb: float) =
+        series |> Array.iteri (fun i x -> 
+            if x > ub then series.[i] <- ub 
+            if x < lb then series.[i] <- lb 
+        )
+
+    let CapMultipleSeries(series : float[,], ub : float, lb: float) =
+        series |> Array2D.iteri (fun i j x -> 
+            if x > ub then series.[i, j] <- ub 
+            if x < lb then series.[i, j] <- lb 
+        )

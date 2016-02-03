@@ -21,12 +21,57 @@ module TimeSeries =
         member this.Degree with get() = this.Lags |> Seq.last
 
     type ARMAResult = {
-        //always corresponding to as nbOfLags in increasing order
-        AR : float[]; 
-        MA : float[]; 
+        //always corresponding to as nbOfLags in increasing order, excluding 0 self AR
+        AR : LagOp; 
+        MA : LagOp; 
         Const : float; 
         Var: float
-    }
+    } with 
+        ///Evaluates the model on a time series by calculating next step values/residuals, alike to matlabs parts.
+        ///Returns for first maxDegree 0s
+        member this.Evaluate (Y : float[]) (isOnResiduals : bool) : float[] = 
+
+            let maxDegree = max this.AR.Degree this.MA.Degree
+
+            if Y.Length < maxDegree then
+                failwith "Not enough observations"
+            
+            let E = Array.zeroCreate Y.Length
+                        
+            //when calculating residuals must subtract the constant
+            let coeffsSign = if isOnResiduals then -1.0 else 1.0
+
+            //on residuals must include self 0 AR
+            let arLags = if isOnResiduals then Array.concat [| [|0|]; this.AR.Lags|] else this.AR.Lags
+            let arCoeffs = if isOnResiduals then  Array.concat [| [|-1.0|]; this.AR.Coefficients|] else this.AR.Coefficients
+
+            let coeffs = Array.concat [|[|this.Const * coeffsSign|]; arCoeffs .*. coeffsSign; this.MA.Coefficients .*. coeffsSign|]
+        
+            for i in maxDegree..Y.Length-1 do
+                //revert indices from lag form to array indices, for example [|1; 2; 24|] to [|23; 22; 0|]
+                let arIdx = Array.rev ((Array.rev arLags) |> Array.map (fun x -> - x + i))
+                let maIdx = Array.rev ((Array.rev this.MA.Lags) |> Array.map (fun x -> - x + i))
+            
+                //get the values at the specified indices
+                let data = Array.concat [| [|1.0|]; sub Y arIdx; sub E maIdx |]
+
+                //arrays sum product
+                let nextValue = data .* coeffs |> sum
+
+                if isOnResiduals then 
+                    E.[i] <- nextValue     
+                else
+                    Y.[i] <- nextValue
+
+            if isOnResiduals then 
+                E
+            else
+                Y
+
+        ///Caluates gaussian NLogLikelihood
+        member this.LogLikelihood (Y : float[]) : float =
+            //in TODO:
+            0.0
 
     ///Simple univariate ARMA estimation based on internal.econ.arma0, (as similar as possible to its code) from
     ///matlab. Returns the coefficients for ARMA, its constant and variance
@@ -34,7 +79,7 @@ module TimeSeries =
     let ARMA (series : float[]) (ar : LagOp) (ma : LagOp) : ARMAResult =
         let p = ar.Degree
         let q = ma.Degree
-
+        
         if p < 0 || q < 0 then
             failwith "Invalid ARMA parameters"
 
@@ -95,10 +140,14 @@ module TimeSeries =
         let var = Statistics.Variance(filteredSeries)
 
         //we're done with it, return
-        if q = 0 then 
+        if q = 0 then
+            //update lagOps coeffs
+            AR |> Array.iteri (fun i x -> ar.Coefficients.[i] <- x) 
+            MA |> Array.iteri (fun i x -> ma.Coefficients.[i] <- x) 
+
             {
-                AR = AR;
-                MA = MA;
+                AR = ar;
+                MA = ma;
                 Const = Const;
                 Var = var
             }
@@ -135,12 +184,17 @@ module TimeSeries =
 
                 counter <- counter + 1
             
-            //eliminate all fixed 0 lags from MA
+            //eliminate all fixed 0 lags from the long AR and MA arrays
+            AR <- Array.init ar.Lags.Length (fun i -> AR.[ar.Lags.[i]-1])
             MA <- Array.init ma.Lags.Length (fun i -> MA.[ma.Lags.[i]-1])
-                                             
+            
+            //update ar and ma lagOps coeffs from locals, TODO: revise...
+            AR |> Array.iteri (fun i x -> ar.Coefficients.[i] <- x) 
+            MA |> Array.iteri (fun i x -> ma.Coefficients.[i] <- x) 
+                                                         
             {
-                AR = AR;
-                MA = MA;
+                AR = ar;
+                MA = ma;
                 Const = Const;
                 Var = Var
             }
@@ -173,14 +227,55 @@ module TimeSeries =
 
         ARMA series ar ma
 
+    //TODO: switch to object oriented...? maybe...
+    
+
     ///Simple forecasting of an ARMA fit
-    let Forecast (series : float[]) (arma : ARMAResult) (forecastSteps : int): ForecastResult = 
-        ///etc...
+    let Forecast (series : float[]) (residuals : float[]) (arma : ARMAResult) (horizon : int) (alpha : float) : ForecastResult = 
+        
+        let maxDegree = max arma.AR.Degree arma.MA.Degree
+
+        let T = horizon + maxDegree
+        
+        //from checkPresampleData... take last maxDegree observations
+        let presample = Array.sub (Array.rev series) 0 maxDegree |> Array.rev       
+        let Y = Array.concat [|presample; Array.zeroCreate horizon|]
+                       
+        let y = arma.Evaluate Y false     
+
         {
-            Forecast = [||];
+            Backcast = y.[0..maxDegree-1];
+            Forecast = y.[maxDegree..T-1];
             //each pairs level, f.ex. 95%
             ConfidenceLevels = [||];
             //from highest to lowest prediction intervals
             Confidence = array2D [|[||]|] //because the inners have the same lengths! not array of arrays!
         }
+
+    ///Calculation of residuals of an ARMA model fit ...
+    let Infer (arma : ARMAResult) (series : float[]) : float[] =
+        
+        let maxDegree = max arma.AR.Degree arma.MA.Degree
+
+        let T = series.Length + maxDegree
+
+        let E0 = Array.zeroCreate maxDegree
+        
+        //revert series and forecast backwards
+        let res = Forecast (Array.rev series) E0 arma maxDegree 0.95
+
+        //equivalent of backcasting to initialize observation in presample, from 0 to maxDegree
+        let Y0 = (Array.rev res.Forecast)
+
+        let Y = Array.concat [| Y0; series |]
+
+        let E = arma.Evaluate Y true
+
+        //eliminate presample, which was just used for initialization
+        Array.sub E maxDegree series.Length
+
+    ///Simple simulation routine of an ARMA fit...
+    let Simulate (series : float[]) (arma : ARMAResult) (nbSimulations : int) : float[,] = 
+        ///etc...
+        array2D [||]
 
