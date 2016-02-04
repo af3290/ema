@@ -26,8 +26,8 @@ namespace EMA.Misc
         {
             var file = string.Format(@"mcp_data_report_{0}-00_00_00",
                 dateTime.ToString("dd-MM-yyyy"));
-            
-            string filePath = GetAppDataServerPathWith(@"\NordpoolSpot\" + file+ ".xls");
+
+            string filePath = GetAppDataServerPathWith(@"\NordpoolSpot\" + file);
 
             var dd = new DataDownloader();
             var er = new Utils.ExcelReader();
@@ -35,19 +35,20 @@ namespace EMA.Misc
             List<PriceCurvesModel> priceCurvesModels;
 
             /* If it doesn't exist, download it */
-            if (!File.Exists(filePath))
-            {                
-                var data = dd.DownloadFile(file + ".xls");                
+            if (!File.Exists(filePath + ".json"))
+            {
+                var data = dd.DownloadFile(file + ".xls");
                 fs = new MemoryStream(data);
                 priceCurvesModels = er.ReadNordPoolSpotPriceCurves(fs);
                 fs.Dispose();
                 Commons.SaveFileAsJson(filePath + ".json", priceCurvesModels);
-            } else
+            }
+            else
             {
                 var json = File.ReadAllText(filePath + ".json");
                 priceCurvesModels = JsonConvert.DeserializeObject<List<PriceCurvesModel>>(json);
             }
-                        
+
             return priceCurvesModels;
         }
         public static List<HistoricalPrice> GetHistoricalSeries(string series)
@@ -66,9 +67,10 @@ namespace EMA.Misc
             f.Dispose();
 
             var d = JsonConvert.DeserializeObject<List<HistoricalPrice>>(json);
-            
+
             //preprocessing... put it somewhere else
-            d = d.Select((s, i) => {
+            d = d.Select((s, i) =>
+            {
                 decimal? v;
                 if (s.Value.HasValue)
                     v = s.Value;
@@ -81,7 +83,7 @@ namespace EMA.Misc
 
             return d;
         }
-        
+
         public static List<TimeSeries> GasForwards()
         {
             var files = Directory.EnumerateFiles(GetAppDataServerPath() + @"\Gas\");
@@ -140,11 +142,6 @@ namespace EMA.Misc
             ////ExcelToJsonSeries(DataItem.Wind_Power_Prognosis);
         }
 
-        public static void ExcelToJsonCapacities(DataItem di)
-        {
-
-        }
-
         public static void ExcelToJsonSeries(DataItem di)
         {
             Func<int, string, string> downloadMethod = (int p1, string p2) => p2.Substring(p1);
@@ -175,7 +172,8 @@ namespace EMA.Misc
         {
             var er = new Utils.ExcelReader();
 
-            Func<string, List<HistoricalPrice>> excelRead = (string path) => {
+            Func<string, List<HistoricalPrice>> excelRead = (string path) =>
+            {
 
                 var hdx1 = er.ReadNordPoolSpotHistoricalPricesInterop(DataDownloader.SavePath + path, 3);
                 var hdx2 = er.ReadNordPoolSpotHistoricalPricesInterop(DataDownloader.SavePath + path, 4);
@@ -190,15 +188,16 @@ namespace EMA.Misc
 
                 return hdx1;
             };
-                        
+
             var nd = new DataDownloader();
 
-            Func<int, List<HistoricalPrice>> readYear = (int year) => {
+            Func<int, List<HistoricalPrice>> readYear = (int year) =>
+            {
                 var p = nd.BuildFileName(di, Country.All, Resolution.Hourly, FromYear(year));
                 return excelRead(p);
             };
 
-            var hd = readYear(2013);            
+            var hd = readYear(2013);
             hd.AddRange(readYear(2014));
             hd.AddRange(readYear(2015));
 
@@ -214,13 +213,14 @@ namespace EMA.Misc
         {
             var er = new Utils.ExcelReader();
 
-            Func<string, int, int, List<HistoricalPrice>> excelRead = (string path, int fromColumn, int toColumn) => {
+            Func<string, int, int, List<HistoricalPrice>> excelRead = (string path, int fromColumn, int toColumn) =>
+            {
                 var cols = new List<List<HistoricalPrice>>();
                 for (int i = fromColumn; i <= toColumn; i++)
                 {
                     cols.Add(er.ReadNordPoolSpotHistoricalPricesInterop(DataDownloader.SavePath + path, i));
                 }
-                
+
                 //needs to be done, since the sum is not already consistently calculated
                 //assumed same data lengths, ofc
                 for (int i = 0; i < cols[0].Count; i++)
@@ -240,9 +240,10 @@ namespace EMA.Misc
 
             var nd = new DataDownloader();
 
-            Func<int, List<HistoricalPrice>> readYear = (int year) => {
+            Func<int, List<HistoricalPrice>> readYear = (int year) =>
+            {
                 var p = nd.BuildFileName(di, Resolution.Hourly, FromYear(year));
-                if(di==DataItem.Consumption_Prognosis)
+                if (di == DataItem.Consumption_Prognosis)
                     return excelRead(p, 3, 7);
                 else
                     return excelRead(p, 3, 14);
@@ -264,7 +265,8 @@ namespace EMA.Misc
         {
             var er = new Utils.ExcelReader();
 
-            Func<string, int, int, List<HistoricalPrice>> excelRead = (string path, int fromColumn, int toColumn) => {
+            Func<string, int, int, List<HistoricalPrice>> excelRead = (string path, int fromColumn, int toColumn) =>
+            {
                 var cols = new List<List<HistoricalPrice>>();
                 for (int i = fromColumn; i <= toColumn; i++)
                 {
@@ -290,7 +292,8 @@ namespace EMA.Misc
 
             var nd = new DataDownloader();
 
-            Func<int, List<HistoricalPrice>> readYear = (int year) => {
+            Func<int, List<HistoricalPrice>> readYear = (int year) =>
+            {
                 var p = nd.BuildFileName(di, Resolution.Hourly, FromYear(year));
                 if (di == DataItem.Hydro_Reservoir)
                     return excelRead(p, 2, 4);

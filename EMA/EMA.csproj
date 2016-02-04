@@ -140,6 +140,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\Images\curvesIntersection.png" />
+    <Content Include="Content\Images\stylizedFactsAboutSystemPrice.png" />
     <Content Include="Content\Images\welfareMaximization.png" />
     <Content Include="Content\plotly\6c6e4c7552e2.js" />
     <Content Include="Content\plotly\jquery.min.js" />
@@ -155,6 +156,11 @@
     <Content Include="Scripts\App\storageValuation.js" />
     <Content Include="Scripts\App\utils.js" />
     <Content Include="Scripts\index.js" />
+    <Content Include="App_Data\Production-Prognosis_Hourly_All.json" />
+    <Content Include="App_Data\Production_Hourly_All.json" />
+    <Content Include="App_Data\SystemPrice_Hourly_EUR.json" />
+    <Content Include="App_Data\Consumption-Prognosis_Hourly_All.json" />
+    <Content Include="App_Data\Consumption_Hourly_All.json" />
     <None Include="Properties\PublishProfiles\Profix.pubxml" />
     <None Include="Scripts\linq-vsdoc.js" />
     <Content Include="Scripts\linq.js" />
@@ -194,7 +200,7 @@
     <Content Include="Views\Home\TimeSeriesTest.cshtml" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="App_Data\" />
+    <Folder Include="App_Data\NordpoolSpot\" />
     <Folder Include="Content\Icons\" />
     <Folder Include="Views\Simulations\" />
   </ItemGroup>

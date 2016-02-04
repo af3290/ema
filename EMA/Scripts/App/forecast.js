@@ -51,6 +51,7 @@
     }
 
     function forecastSuccess(dataObj) {
+        clearSeriesContainingName(chart, "Backcast");
         clearSeriesContainingName(chart, "Forecast");
         clearSeriesContainingName(chart, "Confidence");
 
@@ -71,8 +72,27 @@
             data: data,
             zIndex: 9
         };
-
+                
         chart.addSeries(serie);
+
+        /* Do eventual backcast */
+        var backcast = dataObj.Result.Backcast;
+        var backcastData = [];
+        for (var j = 0; j < backcast.length; j++) {
+            //TODO: fix the +2 error, GMT? or why?
+            backcastData[j] = [dt + (j + 2 - backcast.length) * TICKS_IN_HOUR, backcast[j]];
+        }
+
+        var backcastSerie = {
+            name: "Backcast ",
+            color: "#0000FF",
+            dashStyle: "LongDash",
+            data: backcastData,
+            lineWidth: 0.25,
+            zIndex: 9
+        };
+
+        chart.addSeries(backcastSerie);
 
         /* Do confidences */
         var confidences = dataObj.Result.Confidence;
@@ -132,13 +152,17 @@
             chart.addSeries(cofidenceBandArea);
         }
 
-
-        var thisDate = new Date($scope.date);
-        thisDate.setTime(thisDate.getTime() + (2 * 60 * 60 * 1000)); //UTC bullshit?...
-        var rangeStartDate = Date.parse(thisDate);
-        var rangeEndDate = thisDate.setDate(thisDate.getDate() + dataObj.DaysAhead);
         //todo: fix UTC...
-        //rangeEndDate.setTime(rangeEndDate.getTime() + (2 * 60 * 60 * 1000));
+        var startDate = new Date($scope.date);
+        //Adjust for utc and include eventual backcasting
+        startDate.setTime(startDate.getTime() + (2 * 60 * 60 * 1000) - backcast.length * TICKS_IN_HOUR);
+        var rangeStartDate = Date.parse(startDate);
+
+        var endDate = new Date($scope.date);
+        //Must show only until hour 23
+        endDate.setTime(endDate.getTime() + (1 * 60 * 60 * 1000) + dataObj.DaysAhead * 24 * TICKS_IN_HOUR);
+        var rangeEndDate = Date.parse(endDate);
+
         chart.xAxis[0].setExtremes(rangeStartDate, rangeEndDate);
 
         $scope.extendWith('Fit', dataObj);
