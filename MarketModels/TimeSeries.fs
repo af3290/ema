@@ -22,7 +22,7 @@ module TimeSeries =
         Coefficients : float[];
         Lags : int[];        
     } with
-        member this.Degree with get() = this.Lags |> Seq.last
+        member this.Degree with get() = if Array.isEmpty this.Lags then 0 else this.Lags |> Seq.last
 
     type ARMAResult = {
         //always corresponding to as nbOfLags in increasing order, excluding 0 self AR
@@ -355,8 +355,41 @@ module TimeSeries =
         {
             AR = ar;
             Beta = b;
-            Residuals = residuals;
+            Residuals = residuals; //we don't really need the reisualds, since they can be easily calculated...
             Const = bConst;
             Var = var
         }
 
+    type ARXMAModel = {
+        //The contained ARX model
+        ARX : ARXModel;
+        //The moving average part
+        MA : LagOp;
+    }
+
+    ///estimates ARXMA model with exogenous variables calling the previous ARX model
+    ///Y - nbObservations 
+    ///X - nbObservations by nbPredictors
+    let ARXMA (Y : float[]) (X : float[,]) (ar : LagOp) (ma : LagOp) : ARXMAModel =
+        if Y.Length <> X.GetLength(0) then
+            failwith "Input dimensions don't agree"
+
+        let arx = ARX Y X ar
+
+        //use residuals for calculation of MA part
+        let y = after arx.Residuals ar.Degree
+
+        //use an empty AR to get only the MA part estimated
+        let ear = {
+            Coefficients = [||];
+            Lags = [||]
+        }
+
+        let emptyAR = ARMA y ear ma
+                
+        //const and var should be the same now...
+
+        {
+            ARX = arx;
+            MA = emptyAR.MA;            
+        }
