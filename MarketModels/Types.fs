@@ -12,7 +12,7 @@ module Types =
 
     type SettlementMethod = PayAsBid | UniformPricing
 
-    type ForecastMethod = Naive | HoltWinters | AutoregressiveMovingAverage
+    type ForecastMethod = Naive | HoltWinters | ARMA
 
     type Resolution = Yearly | Quarterly | Monthly | Weekly | Daily | Hourly
 

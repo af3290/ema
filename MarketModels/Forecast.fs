@@ -48,6 +48,33 @@ module Forecast =
             else exp (avg.[j] - stdevs.[j] * stdNorm.InverseCumulativeDistribution(alphas.[i % alphas.Length]))
         )       
 
+    ///Passes both the in and out of sample series and for last period builds the
+    ///prediction intervals. Passes just the in-sample residuals
+    let NormalPredictionIntervalsFromSeries (series : float[]) (residuals : float[]) (period : int) (cis : float[]) : float[,] = 
+        if residuals.Length + period <> series.Length then
+            failwith "Can't do it, must pass in-sample residuals and whole (in+out-sample) data"
+
+        let nbPeriods = residuals.Length/period
+
+        //kinda crappy... but OK for demo...
+        let seasonalPeriods =  Array2D.init nbPeriods period (fun i j -> residuals.[i*period+j])
+
+        let seasonalPeriodsAvgs = Array.init period (fun i -> seasonalPeriods.[*,i] |> mean)
+
+        let logTrans = true
+        let logFunc = if logTrans then (fun x -> log x) else (fun x -> x)
+        let deLogFunc = if logTrans then (fun x -> x) else (fun x -> log x)
+
+        //average those periods, log as well... out-of-sample part follows here...
+        let avg = series.[series.Length - period..series.Length-1] |> Array.map (fun x -> logFunc x)
+        
+        //TODO: revise here...
+
+        //find variations of residuals
+        let stdevs = Array.init period (fun i -> seasonalPeriods.[*,i] |> Array.map (fun x -> logFunc(abs(x))) |> stdev)
+
+        //convert the resulting intervals...
+        NormalPredictionIntervals avg stdevs cis |> Array2D.map (fun x -> deLogFunc x)
 
     ///Averages over all seasonalities provided and returns the average as the next period's forecast
     ///while the min and max represent confidence bands

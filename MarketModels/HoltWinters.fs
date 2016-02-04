@@ -69,17 +69,6 @@ module HoltWinters =
         //logged residuals
         let eps = data.[0..data.Length-1]  -- y.[0..data.Length-1] 
         
-        let nPeriods = (data.Length/nbForecastSteps)
-
-        //kinda crappy... but OK for demo...
-        let seasonalPeriods =  Array2D.init nPeriods nbForecastSteps (fun i j -> eps.[i*nbForecastSteps+j])
-
-        //average those periods, log as well...
-        let avg = y.[y.Length - nbForecastSteps..y.Length-1] |> Array.map (fun x -> log x)
-        
-        //find variations of residuals
-        let stdevs = Array.init nbForecastSteps (fun i -> seasonalPeriods.[*,i] |> stdev)
-
         //confidence alpha...
         let alphaBounds = ConfidenceAlphaBounds alpha
         let cis = [|fst alphaBounds; alpha; snd alphaBounds|]
@@ -88,7 +77,7 @@ module HoltWinters =
                 Backcast = y.[0..y.Length - nbForecastSteps-1];
                 Forecast = y.[y.Length - nbForecastSteps..y.Length-1];
                 ConfidenceLevels = cis;
-                Confidence = NormalPredictionIntervals avg stdevs cis
+                Confidence = NormalPredictionIntervalsFromSeries y eps nbForecastSteps cis
             }
 
         res

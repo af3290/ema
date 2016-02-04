@@ -83,13 +83,14 @@ namespace Utils.UnitTests
         {
             var ts = new MarketModels.Tests.TimeSeriesTests.TimeSeriesUnitTests();
 
-            ////ts.TestFloatingPointErrorsVsMatlab();
-            ////ts.FilterTest2();
+            //ts.TestFloatingPointErrorsVsMatlab();
+            //ts.FilterTest2();
 
-            ////ts.ARMATest1();
-            ////ts.OptimTest1();
+            //ts.ARMATest1();
+            //ts.OptimTest1();
             //ts.ARMATestLongerLags();
-            ts.ARMAForecastSpecifiedModel();
+            //ts.ARMAForecastSpecifiedModel();
+            ts.ARMAXTest1_IndicatorVariables();
         }
     }
 

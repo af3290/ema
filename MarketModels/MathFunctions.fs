@@ -13,6 +13,29 @@ module MathFunctions =
     let sum (vec : float[]) : float =
         vec |> Array.sum
 
+    ///Retrieves a new array formed by all the values after the specified index column 
+    let afterRows2D (vec : float[,]) (index : int) : float[,] =
+        vec.[index..vec.GetLength(0) - 1, *]
+
+    ///Concatenates matrices as per rows or per columns
+    let concat2D (mat1 : float[,]) (mat2 : float[,]) (toRows : bool) : float[,] = 
+        if toRows then
+            if mat1.GetLength(1) <> mat2.GetLength(1) then
+                failwith "Column counts must be equal"
+
+            Array2D.init (mat1.GetLength(0) + mat2.GetLength(0)) (mat1.GetLength(1)) 
+                (fun i j -> if i < mat1.GetLength(0) then mat1.[i, j] else mat2.[i - mat1.GetLength(0), j])
+        else
+            if mat1.GetLength(0) <> mat2.GetLength(0) then
+                failwith "Row counts must be equal"
+
+            Array2D.init (mat1.GetLength(0)) (mat1.GetLength(1) + mat2.GetLength(1)) 
+                (fun i j -> if j < mat1.GetLength(1) then mat1.[i, j] else mat2.[i , j - mat1.GetLength(1)])
+
+    ///Retrieves a new array formed by all the values after the specified index
+    let after (vec : float[]) (index : int) : float[] =
+        vec.[index..vec.Length - 1]
+
     ///Retrieves a new array formed by all the values at the specified indices
     let sub (vec : float[]) (indices : int[]) : float[] =
         Array.init indices.Length (fun i -> vec.[indices.[i]])
@@ -200,3 +223,8 @@ module MathFunctions =
     let DiffSeries (series : float[]) : float[] = 
         series |> Seq.skip 1 |> Seq.mapi(fun i x -> x / series.[i]) |> Seq.toArray
 
+    ///Returns a matrix where each column is the series lagged by each given lag value
+    ///Initial values are NaN, the rest of series is truncated
+    let LaggedMatrix (series : float[]) (lags : int[]) : float[,] =
+        Array2D.init series.Length lags.Length (fun i j -> if i < lags.[j] then nan else series.[i-lags.[j]])
+        

@@ -3,20 +3,24 @@
 module TimeSeries =
     //TODO: port from matlab... yes, awesome...
     open System
-    open System.Collections.Generic    
-    open Operations
-    open Optimization
-    open Forecast
+    open System.Collections.Generic        
     open MathNet.Numerics
     open MathNet.Numerics.Statistics
+    open MathNet.Numerics.LinearAlgebra
     open MathNet.Numerics.LinearAlgebra.Double
-    open MathFunctions
+    open MathNet.Numerics.LinearAlgebra.Matrix
+    open MathNet.Numerics.LinearAlgebra.MatrixExtensions
+    open MathNet.Numerics.LinearAlgebra.DenseMatrix
+    
+    open Operations
+    open MathFunctions    
+    open Optimization
+    open Forecast
 
     ///Convention: missing lags are fixed at 0, not missing with 0s are to be optimized...
     type LagOp = {
         Coefficients : float[];
-        Lags : int[];
-        
+        Lags : int[];        
     } with
         member this.Degree with get() = this.Lags |> Seq.last
 
@@ -243,13 +247,27 @@ module TimeSeries =
                        
         let y = arma.Evaluate Y false     
 
+        //confidence alpha...
+        let alphaBounds = ConfidenceAlphaBounds alpha
+        let cis = [|fst alphaBounds; alpha; snd alphaBounds|]
+
+        //we have several methods of calculating PIs... from matlab... by seasonal folding...
+        //we re not coming from infer
+        let backcast = if series.Length = residuals.Length then series .+ residuals else [||]
+        let confidence = 
+            if series.Length = residuals.Length then 
+                    let inAndOutSampleSeries = Array.concat [|series; y.[maxDegree..T-1]|]
+                    NormalPredictionIntervalsFromSeries inAndOutSampleSeries residuals horizon cis 
+                else 
+                    array2D [||]
+
         {
-            Backcast = y.[0..maxDegree-1];
+            Backcast = backcast
             Forecast = y.[maxDegree..T-1];
             //each pairs level, f.ex. 95%
-            ConfidenceLevels = [||];
+            ConfidenceLevels = cis;
             //from highest to lowest prediction intervals
-            Confidence = array2D [|[||]|] //because the inners have the same lengths! not array of arrays!
+            Confidence = confidence
         }
 
     ///Calculation of residuals of an ARMA model fit ...
@@ -278,4 +296,67 @@ module TimeSeries =
     let Simulate (series : float[]) (arma : ARMAResult) (nbSimulations : int) : float[,] = 
         ///etc...
         array2D [||]
+
+
+    type ARXModel = {
+        AR : LagOp;
+        //Betas of the predictors data given by X
+        Beta : float[];
+        Residuals : float[];
+        //Regression variance and constant
+        Var : float;
+        Const : float;
+    }
+
+    ///estimates AR with exogenous variables... estimate.m:1522 arx0(...)
+    ///Y - nbObservations 
+    ///X - nbObservations by nbPredictors
+    let ARX (Y : float[]) (X : float[,]) (ar : LagOp) : ARXModel =
+        if Y.Length <> X.GetLength(0) then
+            failwith "Input dimensions don't agree"
+
+        let maxDegree = ar.Degree
+        
+        //add lagged columns... NOT DONE PROPERLY...
+        let xOnes = Array2D.init Y.Length 1 (fun i j -> 1.0)
+        let yLagged = LaggedMatrix Y ar.Lags
+        let xOnesYLagged = concat2D xOnes yLagged false
+        let xWithYLagged = concat2D xOnesYLagged X false
+
+        //eliminate presample needed for AR initialization
+        let x = afterRows2D xWithYLagged maxDegree
+        let xMat = DenseMatrix.OfArray x
+        
+        let y = after Y maxDegree
+        let yMat = DenseMatrix.OfColumnVectors(DenseVector.OfArray(y))
+        
+        let qr = xMat.QR()
+        let q = qr.Q.Transpose().Multiply(yMat)
+                
+        let C = qr.R.ToArray()
+        let d = q.ToColumnArrays().[0]
+        
+        //empty constraints
+        let Aeq = Array2D.init 1 (C.GetLength(0)) (fun i j -> 0.0)
+        let beq = [|0.0|]
+
+        let bbb = ConstrainedLinearLeastSquares C d Aeq beq
+        
+        //already exclude the initial maxDegree presample
+        let residuals = y -- xMat.Multiply(DenseVector.OfArray(bbb)).ToArray()
+
+        //assign output betas
+        //yet SAR are excluded... 
+        let bConst = bbb.[0]
+        let b = after bbb (1 + ar.Lags.Length)   
+        let var = Statistics.Variance(residuals)
+        bbb.[1..ar.Lags.Length] |> Array.iteri (fun i x -> ar.Coefficients.[i] <- x)
+        
+        {
+            AR = ar;
+            Beta = bbb;
+            Residuals = residuals;
+            Const = bConst;
+            Var = var
+        }
 
