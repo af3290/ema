@@ -354,7 +354,7 @@ module TimeSeries =
         
         {
             AR = ar;
-            Beta = bbb;
+            Beta = b;
             Residuals = residuals;
             Const = bConst;
             Var = var
