@@ -28,7 +28,7 @@
                 <h2><a data-toggle="modal" data-target="#demoDescription">Price Forecast</a></h2>
             </div>
             <div class="panel">
-                <h3>Parameters</h3>
+                <h3 data-toggle="tooltip" data-placement="right" title="Demo parameters">Parameters</h3>
                 <form class="form-horizontal">
                     <div class="form-group">
                         <label for="date-time-picker" class="control-label col-xs-6">Date</label>
@@ -42,17 +42,23 @@
                         <label for="menu-fm" class="control-label col-xs-6">Forecast Method</label>
                         <div class="col-xs-6">
                             @{Html.RenderPartial("~/Views/Components/DropDownList.cshtml", null, new ViewDataDictionary(){
-                                  { "Id", "menu-fm" } , { "ModelName", "ForecastMethods" }, { "SelectedValue", "forecastMethod" } });}
+                                  { "Id", "menu-fm" } , { "ModelName", "ForecastMethods" }, { "SelectedValue", "forecastMethod" },
+                                  { "Tooltip", "One of the 3 methods used to forecast, arranged in order of accuracy."} });}
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="menu-sp" class="control-label col-xs-6">Spikes Preprocess</label>
                         <div class="col-xs-6">
                             @{Html.RenderPartial("~/Views/Components/DropDownList.cshtml", null, new ViewDataDictionary(){
-                                  { "Id", "menu-sp" } , { "ModelName", "SpikesPreprocessMethods" }, { "SelectedValue", "spikesPreprocessMethod" } });}
+                                  { "Id", "menu-sp" } , { "ModelName", "SpikesPreprocessMethods" }, { "SelectedValue", "spikesPreprocessMethod" },
+                                  { "Tooltip", "All spikes will be replaced by an interpolation method, shown on the chart, and will not affect the forecasted values."} });}
                         </div>
                     </div>
-                    <div class="form-group">
+                    <div ng-show="spikesPreprocessMethod != 'None'">
+                        @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                            { "Id", "spikesThreshold" }, { "Label", "Spikes Threshold" } });}
+                    </div>
+                    <div class="form-group" ng-show="forecastMethod == 'ARMA'">
                         <label for="menu-ev" class="control-label col-xs-6">Exogenous Variables</label>
                         <div class="col-xs-6">
                             @{Html.RenderPartial("~/Views/Components/SelectionList.cshtml", null, new ViewDataDictionary(){
@@ -69,8 +75,10 @@
                     @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
                                             { "Id", "confidence" }, { "Label", "Confidence (%)" } });}
                 </form>
-                <h3>Model Parameters</h3>
-                <form class="form-horizontal">
+                <h3 data-toggle="tooltip" data-placement="right" title="Editable values of the estimated forecasting model paramters">
+                    Model Parameters
+                </h3>
+                <form class="form-horizontal" ng-show="MathModel != null && Object.keys(MathModel).length != 0">
                     <div ng-repeat="(key, value) in MathModel" class="form-group">
                         <label for="input-{{key}}" class="control-label col-xs-6">{{key}}</label>
                         <div class="col-xs-6">
@@ -91,12 +99,19 @@
                 <div id="container" style="height: 400px; min-width: 310px"></div>
                 <div id="model-details" class="row">
                     <div class="col-md-6">
-                        @Html.Partial("~/Views/Components/ForecastFit.cshtml")
+                        @{Html.RenderPartial("~/Views/Components/ForecastFit.cshtml", null, new ViewDataDictionary(){
+                                            {"Title", "Estimation Summary" }, { "ModelName", "EstimationFit" } });}
                     </div>
                     <div class="col-md-6">
-                        <iframe id="MarketCurvesFrame" src="{{ForecastSurfaceIframeUrl}}"
-                                style="width: 100%; height: 480px; border: 0;" frameBorder="0"></iframe>
+                        @{Html.RenderPartial("~/Views/Components/ForecastFit.cshtml", null, new ViewDataDictionary(){
+                                            {"Title", "Forecast Summary" }, { "ModelName", "Fit" }});}
+                        @*<iframe id="MarketCurvesFrame" src="{{ForecastSurfaceIframeUrl}}"
+                                style="width: 100%; height: 480px; border: 0;" frameBorder="0"></iframe>*@
                     </div>
+                </div>
+                <div id="xxxmodel-details" class="row">
+                    @*Model Diagnostic...
+                    significance... etc...*@
                 </div>
             </div>
         </div>
@@ -116,37 +131,50 @@
                     A simple forecasting demonstration of various common models for houly price. It provides the
                     ability to forecast in the historical period, thereby allowing for an easy evaluation of a model, also shows the backcasting data.
                     As well as point forecast, interval forecasts are calculated and other relevant statistics are shown (P Values, etc...).
+                    Very important to observe are the characterstics of electricity price, which are enumerated in the following image.
                 </p>
-                <div class="row">
-                    <div class="col-md-4">
-                        <p>
-                            Very important to observe are the characterstics of electricity price...
-                            1. strong seasonalities...
-                            2. spikes...
-                        </p>
-                    </div>
-                    <div class="col-md-8">
-                        <img src="~/Content/Images/curvesIntersection.png" style="width: 480px;" />
-                    </div>
-                </div>
+                <img src="~/Content/Images/stylizedFactsAboutSystemPrice.png" style="width: 740px;" />
                 <h2>Forecast Methods</h2>
                 <p>Choice of methods is based on simplicity and conceptual accessibility. Those methods are adapted 
                    from research literature and presented for comparison purposes. Besides the naive method, all other support
-                   inclusion of exogenous varaibles</p>
+                   inclusion of exogenous varaibles. Also, the user is presented with model parameter estimates that can be changed.
+                </p>
                 <h3>1. Naive</h3>
                 <p>
-                    As a benchmarking method the naive approach is take
+                    As a benchmarking method the naive approach has fundamental importance. It takes previous season's prices
+                    and averages them to compute the forecast. Previous day, previous week's today, previous month's today,
+                    previous year's today are included, the variation constitutes the basis for the construction of normally distributed
+                    prediction intervals.
+                    <div class="tex2jax_process" style="">
+                        $$ Y_{t+h} = Average(\{Y_{t-i}|i = 0, 24, 168, 672, 8760\}) $$
+                        $$ \text{h}\text{ is the forecast horizon. } $$
+                    </div>
                 </p>
                 <h3>2. Holt Winters</h3>
                 <p>
-
+                    Although more commonly used for demand variables, it's simple enough to be used here... it shows...
+                    <div class="tex2jax_process" style="">
+                    </div>
+                    Estimation is done using a bounded linear function optimizer that minimizes the associated
+                    RMSE within reasonable bounds.
                 </p>
                 <h3>3. Autoregressive Moving Average</h3>
                 <p>
                     Full specification of a model looks like...
+                    The full version is...
+                    <div class="tex2jax_process" style="">
+                        $$ \phi(B)Y_t = \theta(B)ε_t+\sum_{i=1}^{N_{ex}}\beta_i(B)X_t^i $$
+                        $$ \text{Y}\text{ is the predicted variable. } $$
+                        $$ \text{X}\text{ is the exogenous predictor variables } $$
+                        $$ \text{N}_ex\text{ is the number of exogenous predictor variables } $$
+                        $$ \phi(B) = 1 - \sum_{i=1}^{p}\phi_iB^i \text{ is the backward lag operator. } $$
+                        $$ \theta(B) = 1 + \sum_{i=1}^{q}\theta_iB^i \text{ is the forward lag operator: } $$
+                    </div>
+                    The compact version is
+                    Esimation is done via OLS fitting
                 </p>
                 <h2>Multivariate regression</h2>
-                <p>Exogenous variables are included...</p>
+                <p>Exogenous variables are included via linear regression</p>
                 <div class="row">
                     <div class="col-md-4">
                         <p>
@@ -160,21 +188,6 @@
                
                 <hr />
 
-                <h3>Sensitivities</h3>
-                <p>
-                    Of significant importance in microeconomics is to find price sensitivities, in this case the demand is a
-                    very inelastic variable, while the supply is more elastic. Those values are found either throw line intersection
-                    slopes or through linear programming sensitivities. The can be defined as follows:
-                </p>
-                <div class="tex2jax_process" style="">
-                    $$ \text{E}_q = \frac{\text{P}_i - \text{P}_{i-1}}{\text{Q}_i - \text{Q}_{i-1}}  $$
-                    $$ \text{E}_q \text{ - elasticity of quantity }  $$
-                    $$ \text{i} \text{ - the equilibrium index}  $$
-                    $$ \text{Sensitivity}_{q}(Q_i\pm\text{x%}) =  \text{E}_{q}*\pm\text{x%} $$
-                    $$ x \ \text{ - the required % change in quantity}  $$
-                </div>
-                <hr />
-
                 <h3>Limitations</h3>
                 1. Multiple regimes or heteroskedasticity concerns are ignored.<br />
                 2. Outages and other short term constraints are not included. <br />
@@ -182,17 +195,17 @@
                 <hr />
 
                 <h3>References</h3>
-                Weron, R., Misiorek, A. Forecasting spot electricity prices: A comparison of
+                [1] - Weron, R., Misiorek, A. Forecasting spot electricity prices: A comparison of
                 parametric and semiparametric time series models. International Journal of Forecasting. October
                 2008, Vol. 24.
                 <br />
-                Taylor, J.W. (2003) Short-term electricity demand forecasting using double seasonal exponential
+                [2] - Taylor, J.W. (2003) Short-term electricity demand forecasting using double seasonal exponential
                 smoothing, Journal of Operational Research Society 54, 799–805.
                 <br />
-                Winters, P. R. (April 1960) Forecasting Sales by Exponentially Weighted Moving Averages", 
+                [3] - Winters, P. R. (April 1960) Forecasting Sales by Exponentially Weighted Moving Averages", 
                 Management Science 
                 <br />
-                Box, G. E. P., G. M. Jenkins, and G. C. Reinsel. Time Series
+                [4] - Box, G. E. P., G. M. Jenkins, and G. C. Reinsel. Time Series
                 Analysis: Forecasting and Control. 3rd edition. Upper Saddle River,
                 NJ: Prentice-Hall, 1994.
             </div>

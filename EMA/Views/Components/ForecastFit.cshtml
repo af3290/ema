@@ -1,6 +1,6 @@
-﻿<h2>Summary</h2>
+﻿<h2>@ViewData["Title"]</h2>
 <h3>Fit Statistics</h3>
-<table>
+<table class="table table-striped">
     <thead>
         <tr>
             <td></td>
@@ -11,38 +11,64 @@
     <tbody>
         <tr>
             <td>Bias</td>
-            <td style="color:{{Fit.Bias > 25 ? "red":""}}">
-                {{Fit.Bias | number: 4}}
+            <td style="color:{{@(ViewData["ModelName"]).Bias > 25 ? "red":""}}">
+                {{@(ViewData["ModelName"]).Bias | number: 4}}
+            </td>
+            <td>
+                N/A
             </td>
         </tr>
         <tr>
             <td>R Squared</td>
-            <td style="color:{{Fit.Bias > 25 ? "red":""}}">
-                {{Fit.RSquared * 100 | number: 2}} %
+            <td style="color:{{@(ViewData["ModelName"]).Bias > 25 ? "red":""}}">
+                {{@(ViewData["ModelName"]).RSquared * 100 | number: 2}} %
+            </td>
+            <td>
+                N/A
             </td>
         </tr>
         <tr>
-            <td>Independent?</td>
-            <td>{{Fit.IndependencePValue < 0.05 ? "Yes":"No"}}</td>
-            <td style="color:{{Fit.IndependencePValue > 0.05 ? "red":""}}"
+            <td>RMSE</td>
+            <td data-toggle="tooltip" 
+                title="Root mean square error of the whole fit">
+                {{@(ViewData["ModelName"]).RSE[1] * 100 | number: 2}} {{Currency}}
+            </td>
+            <td>
+                N/A
+            </td>
+        </tr>
+        <tr>
+            <td>MAPE</td>
+            <td data-toggle="tooltip" 
+                title="Mean average percentage error of the whole fit">
+                {{@(ViewData["ModelName"]).APE[1] | number: 2}} %
+            </td>
+            <td>
+                N/A
+            </td>
+        </tr>
+        <tr>
+            <td>Independent</td>
+            <td>{{@(ViewData["ModelName"]).IndependencePValue < 0.05 ? "Yes":"No"}}</td>
+            <td style="color:{{@(ViewData["ModelName"]).IndependencePValue > 0.05 ? "red":""}}"
                 data-toggle="tooltip" 
                 title="Whether residuals are independent based on autocorrelation">
-                {{ Fit.IndependencePValue | number: 4}}
+                {{ @(ViewData["ModelName"]).IndependencePValue | number: 4}}
             </td>
         </tr>
         <tr>
-            <td>Normal?</td>
-            <td>{{Fit.NormalityPValue < 0.05 ? "Yes":"No"}}</td>
-            <td style="color:{{Fit.NormalityPValue < 0.05 ? "":"res"}}"
+            <td>Normal</td>
+            <td>{{@(ViewData["ModelName"]).NormalityPValue < 0.05 ? "Yes":"No"}}</td>
+            <td style="color:{{@(ViewData["ModelName"]).NormalityPValue < 0.05 ? "":"res"}}"
                 data-toggle="tooltip" 
-                title="Whether residuals are normally distributed (or according test)">
-                {{ Fit.NormalityPValue | number: 4}}
+                title="Whether residuals are normally distributed (or T distributed)">
+                {{@(ViewData["ModelName"]).NormalityPValue | number: 4}}
             </td>
         </tr>
     </tbody>
 </table>
 <h3>Residuals Statistics</h3>
-<table>
+<table class="table table-striped table-hover">
     <thead>
         <tr>
             <td></td>
@@ -53,28 +79,26 @@
     </thead>
     <tbody>
         <tr>
-            <td rowspan="2" data-toggle="tooltip" 
-                title="Hours 6–10am, 4–8pm">Peak</td>
-            <td>{{ PeakFit.APE[0] | number: 2}} %</td>
-            <td>{{ PeakFit.APE[1] | number: 2}} %</td>
-            <td>{{ PeakFit.APE[2] | number: 2}} %</td>    
+            <td rowspan="2" style="vertical-align: middle;">Peak</td>
+            <td>{{ Peak@(ViewData["ModelName"]).APE[0] | number: 2}} %</td>
+            <td>{{ Peak@(ViewData["ModelName"]).APE[1] | number: 2}} %</td>
+            <td>{{ Peak@(ViewData["ModelName"]).APE[2] | number: 2}} %</td>    
         </tr>
         <tr>            
-            <td>{{ PeakFit.RSE[0] | number: 2}} {{Currency}}</td>
-            <td>{{ PeakFit.RSE[1] | number: 2}} {{Currency}}</td>
-            <td>{{ PeakFit.RSE[2] | number: 2}} {{Currency}}</td>
+            <td>{{ Peak@(ViewData["ModelName"]).RSE[0] | number: 2}} {{Currency}}</td>
+            <td>{{ Peak@(ViewData["ModelName"]).RSE[1] | number: 2}} {{Currency}}</td>
+            <td>{{ Peak@(ViewData["ModelName"]).RSE[2] | number: 2}} {{Currency}}</td>
         </tr>
         <tr>
-            <td rowspan="2" data-toggle="tooltip" 
-                title="Rest of day">Base</td>
-            <td>{{ BaseFit.APE[0] | number: 2}} %</td>
-            <td>{{ BaseFit.APE[1] | number: 2}} %</td>
-            <td>{{ BaseFit.APE[2] | number: 2}} %</td>
+            <td rowspan="2" style="vertical-align: middle;">Base</td>
+            <td>{{ Base@(ViewData["ModelName"]).APE[0] | number: 2}} %</td>
+            <td>{{ Base@(ViewData["ModelName"]).APE[1] | number: 2}} %</td>
+            <td>{{ Base@(ViewData["ModelName"]).APE[2] | number: 2}} %</td>
         </tr>
         <tr>
-            <td>{{ BaseFit.RSE[0] | number: 2}} {{Currency}}</td>
-            <td>{{ BaseFit.RSE[1] | number: 2}} {{Currency}}</td>
-            <td>{{ BaseFit.RSE[2] | number: 2}} {{Currency}}</td>
+            <td>{{ Base@(ViewData["ModelName"]).RSE[0] | number: 2}} {{Currency}}</td>
+            <td>{{ Base@(ViewData["ModelName"]).RSE[1] | number: 2}} {{Currency}}</td>
+            <td>{{ Base@(ViewData["ModelName"]).RSE[2] | number: 2}} {{Currency}}</td>
         </tr>
     </tbody>
 </table>
