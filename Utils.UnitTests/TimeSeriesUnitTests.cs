@@ -82,7 +82,7 @@ namespace Utils.UnitTests
         public void ARMA()
         {
             var ts = new MarketModels.Tests.TimeSeriesTests.TimeSeriesUnitTests();
-
+            //ts.ARMAInferResidualsOfSpecifiedModel();
             //ts.TestFloatingPointErrorsVsMatlab();
             //ts.FilterTest2();
 
@@ -90,7 +90,10 @@ namespace Utils.UnitTests
             //ts.OptimTest1();
             //ts.ARMATestLongerLags();
             //ts.ARMAForecastSpecifiedModel();
-            ts.ARMAXTest1_IndicatorVariables();
+            ts.EstimateSpikesTest();
+            ts.MovingSDsLag1();
+            ts.MovingSDsLag2();
+            //ts.ARMAXTest1_IndicatorVariables();
         }
     }
 
