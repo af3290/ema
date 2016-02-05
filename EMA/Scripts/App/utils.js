@@ -96,7 +96,7 @@ function areSameDates(d1, d2) {
 //if null posts all data...
 function doPageParametersPost($scope, frameId) {
     if (frameId == undefined) {
-        console.error("Must have frame Id, but will use current...");
+        console.warn("Must have frame Id, but will use current...");
         frameId = $scope.currentFrameId;
     }
     if ($scope.postUrl[frameId] == undefined)
@@ -113,8 +113,9 @@ function doPageParametersPost($scope, frameId) {
         });
 }
 
-//generic method
-function registerParameter($scope, param, value) {
+//generic method to attach parameter by name and value to the scope
+//so that when changed those belonging to a particular frame will pe posted to the according url
+function registerParameter($scope, param, value, frameId) {
     $scope[param] = value;
         
     $scope.httpPostParameters.push(param);
@@ -124,15 +125,22 @@ function registerParameter($scope, param, value) {
             var sameDay = areSameDates(newval, oldval);
             if (sameDay) return;
 
-            doPageParametersPost($scope);
+            doPageParametersPost($scope, frameId);
         });
     } else if (value.constructor == Number || value.constructor == String) {
         $scope.$watch(param, function (newval, oldval) {
             if (newval == oldval || newval == undefined || oldval == undefined)
             return;
 
-            doPageParametersPost($scope);
+            doPageParametersPost($scope, frameId);
         });
+    } else if (value.constructor == Object) {
+        $scope.$watch(param, function (newval, oldval) {
+            if (newval == oldval || newval == undefined || oldval == undefined)
+                return;
+
+            doPageParametersPost($scope, frameId);
+        }, true);
     }
 
     //set global scope variables... TODO: find a better place to set them...
@@ -154,7 +162,7 @@ function extendWith(name, object) {
 }
 
 //Extends the angular scope with a child provided as a child from given object found by the given name
-//and also watches it...
+//and also watches it... in TODO: it should have only primitive properties, arrays will be flattened, on changes they will be converted back...
 function extendWithAndListen(name, object) {
     var oldObj = this[name];
 
