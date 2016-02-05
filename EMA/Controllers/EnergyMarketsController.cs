@@ -19,7 +19,9 @@ namespace EMA.Controllers
         public ActionResult SpotPriceForecast()
         {
             //to be automatically detected from available data...
-            var exVar = new string[] {"Production", "Production-Prognosis",
+            var exVar = new string[] {
+                "SpecialWeekDays",
+                "Production", "Production-Prognosis",
                 "Consumption", "Consumption-Prognosis",
                 "Wind", "Hydro"};
             var exVarJs = JsonConvert.SerializeObject(exVar);

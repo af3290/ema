@@ -3,10 +3,11 @@
 
     $scope.postUrl = {
         "Data": "/Prices/HistoricalSystemPrice?refresh=false&resolution=5",
-        "Forecast": "/Prices/Forecast"
+        "Forecast": "/Prices/Forecast",
+        "Spikes": "/Prices/EstimateSpikes"
     };
 
-    $scope.onChangedPostResponse = { "Data": dataSuccess, "Forecast": forecastSuccess };
+    $scope.onChangedPostResponse = { "Data": dataSuccess, "Forecast": forecastSuccess, "Spikes": spikesSuccess };
 
     $scope.currentFrameId = "Forecast"; //all changes are posted there...
     //prepare variables... put somewhere...
@@ -15,7 +16,8 @@
 
     registerParameter($scope, 'date', new Date(2015, 7, 3));
     registerParameter($scope, 'forecastMethod', $scope.ForecastMethods[0]);
-    registerParameter($scope, 'spikesPreprocessMethod', $scope.SpikesPreprocessMethods[0]);
+    registerParameter($scope, 'spikesPreprocessMethod', $scope.SpikesPreprocessMethods[0], "Spikes");
+    registerParameter($scope, 'spikesThreshold', 1.2, "Spikes");
     registerParameter($scope, 'timeHorizon', $scope.TimeHorizons[0]);
     registerParameter($scope, 'confidence', 0.60);
     registerParameter($scope, 'exogenousVariables', {});
@@ -39,6 +41,12 @@
             ordinal: false,
             type: 'datetime'
             //,tickInterval: 86400000
+        },
+        legend: {
+            layout: 'vertical',
+            align: 'right',
+            verticalAlign: 'top',
+            borderWidth: 0
         },
         series: []
     });
@@ -165,6 +173,9 @@
 
         chart.xAxis[0].setExtremes(rangeStartDate, rangeEndDate);
 
+        $scope.extendWith('EstimationFit', dataObj);
+        $scope.extendWith('BaseEstimationFit', dataObj);
+        $scope.extendWith('PeakEstimationFit', dataObj);
         $scope.extendWith('Fit', dataObj);
         $scope.extendWith('BaseFit', dataObj);
         $scope.extendWith('PeakFit', dataObj);
@@ -172,7 +183,39 @@
         
         blockUI.stop();
     }
-                
+    
+    function plotScatter(data) {
+
+    }
+
+    function spikesSuccess(dataObj) {
+        clearSeriesContainingName(chart, "Spikes");
+
+        var data = dataObj.Spikes;
+        var priceData = [];
+        for (var i = 0; i < data.length; i++) {
+            //try using linq.js => YES!
+            var dt = Date.parse(data[i].DateTime);
+            priceData[i] = [dt, data[i].Value];
+        }
+
+        var serie = {
+            name: "Spikes Values",
+            type: "scatter",
+            color: '#551a8b',
+            data: priceData,
+            tooltip: {
+                valueDecimals: 4
+            },
+            marker: {
+                radius: 4
+            },
+            zIndex: 9
+        };
+
+        chart.addSeries(serie);
+    }
+
     function dataSuccess(data) {
         var priceData = [];
         for (var i = 0; i < data.length; i++) {

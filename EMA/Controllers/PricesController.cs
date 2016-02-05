@@ -9,6 +9,7 @@ using JsonConvert = Newtonsoft.Json.JsonConvert;
 using static MarketModels.Types;
 using static MarketModels.Forecast;
 using static MarketModels.TimeSeries;
+using static MarketModels.Preprocess;
 using EMA.Misc;
 using MarketModels;
 using Newtonsoft.Json.Linq;
@@ -16,7 +17,7 @@ using Newtonsoft.Json.Linq;
 namespace EMA.Controllers
 {
     public class PricesController : Controller
-    {        
+    {
         //TODO: add uniqueStructure only for non overlapping short contracts to take priority
         public JsonResult ForwardCurve(string region, bool nonOverlapping)
         {
@@ -24,7 +25,7 @@ namespace EMA.Controllers
             var fc = dd.ForwardCurve(nonOverlapping);
             return Json(fc, JsonRequestBehavior.AllowGet);
         }
-        
+
         public JsonResult HistoricalSystemPrice(bool refresh, int resolution)
         {
             if (resolution == 5)//because of bullshit F# types... dummy for now... fix later
@@ -33,22 +34,22 @@ namespace EMA.Controllers
                 return Json(d, JsonRequestBehavior.AllowGet);
             }
 
-            //TODO: persist...
-            var dailyHistoricalPrices = AppData.GetHistoricalSeries("SystemPrice_Daily_EUR.json");
+            //TODO: aggregate to daily... does it make sense?
+            var dailyHistoricalPrices = AppData.GetHistoricalSeries("SystemPrice_Hourly_EUR.json");
 
             return Json(dailyHistoricalPrices, JsonRequestBehavior.AllowGet);
         }
 
         [HttpPost]
         public JsonResult GasFutures(DateTime? date,
-            DateTime? afterDate, DateTime? beforeDate, 
+            DateTime? afterDate, DateTime? beforeDate,
             DateTime? afterMaturity, DateTime? beforeMaturity)
         {
             var x = AppData.GasForwards()
-                .OrderBy(ts=>ts.Maturity)
+                .OrderBy(ts => ts.Maturity)
                 .ToList();
 
-            if(afterMaturity.HasValue)
+            if (afterMaturity.HasValue)
             {
 
             }
@@ -64,7 +65,7 @@ namespace EMA.Controllers
                 //x = x.Where(t => afterMaturity <= t.Maturity && t.Maturity <= beforeMaturity).ToList();
             }
 
-            if(date.HasValue)
+            if (date.HasValue)
             {
                 //too inefficient?
                 //all futures that have data at the available at datetime, all futures which represent maturities to this spot datetime
@@ -85,7 +86,7 @@ namespace EMA.Controllers
             /* Aproximate to latest minute */
             date = date.AddSeconds(-DateTime.Now.Second);
             var timestamp = date.Ticks - DateTime.Parse("01/01/1970 00:00:00").Ticks;
-            timestamp = timestamp/10000;
+            timestamp = timestamp / 10000;
 
             var url = @"http://driftsdata.statnett.no/restapi/ProductionConsumption/GetLatestDetailedOverview?timestamp={0}";
             var furl = string.Format(url, timestamp);
@@ -101,39 +102,85 @@ namespace EMA.Controllers
             }
 
             var obj = JsonConvert.DeserializeObject(result);
-            
+
             return Json(obj, JsonRequestBehavior.AllowGet);
         }
-        
+
+        [HttpPost]
+        public JsonResult EstimateSpikes(string timeSeries, string spikesPreprocessMethod, double spikesThreshold)
+        {
+            var spikesPreprocess = GetUnionCaseFromName<SpikePreprocess>(spikesPreprocessMethod);
+
+            //Build output by re attaching the corresponding original dates...
+            var spikes = new List<HistoricalPrice>();
+            var interpolation = new List<HistoricalPrice>();
+
+            if (spikesPreprocess != SpikePreprocess.None)
+            {
+
+                var d = AppData.GetHistoricalSeries("SystemPrice_Hourly_EUR.json");
+
+                var data = d
+                    .Select(x => x.Value != null ? (double)x.Value : 0) //0 for now, when interpolation is done... etc..
+                    .ToArray();
+
+                //First deseasonalize data at larger lags, all >= weekly, a stable series is need since spikes are at lengths <= day
+                var desezonalizedData = Desezonalize(data, 168);
+
+                //Then perform the spike estimation 
+                var spikeIndices = EstimateSpikesOnMovSDs(desezonalizedData, 24, 2, spikesThreshold);
+                                
+                for (int i = 0; i < spikeIndices.Length; i++)
+                {
+                    var p = d[spikeIndices[i]];
+                    spikes.Add(new HistoricalPrice() { DateTime = p.DateTime, Value = p.Value });
+                }
+
+                if(spikesPreprocess.IsLimited)
+                {
+
+                }
+
+                if (spikesPreprocess.IsSimilarDay)
+                {
+
+                }
+            }
+
+            var obj = new
+            {
+                Spikes = spikes,
+                Interpolation = interpolation
+            };
+
+            return Json(obj);
+        }
+
         [HttpPost]
         public JsonResult Forecast(DateTime? date, string forecastMethod, string forecastModel,
             string timeHorizon, double confidence, string MathModel, string exogenousVariables)
-        {            
-            var dt = date.HasValue? date.Value:DateTime.Today; 
+        {
+            var dt = date.HasValue ? date.Value : DateTime.Today;
             var ths = GetUnionCaseNames<Types.TimeHorizon>();
 
-            var forecastHorizon = Array.IndexOf(ths, timeHorizon); //TODO: finish here... yeah...
-            //TODO: do it later...
+            var forecastHorizon = Array.IndexOf(ths, timeHorizon);
+            var forecastingMethod = GetUnionCaseFromName<ForecastMethod>(forecastMethod);
+
             if (forecastHorizon < 0)
                 throw new ArgumentException("Wrong argument");
 
-            var exogenousVariablesJs = JObject.Parse(exogenousVariables); //alternative...?
-            var exVars = exogenousVariablesJs.Properties()
-                .Where(p => p.Value.ToString() == "True")
-                .Select(p => AppData.GetHistoricalSeries(p.Name + "_Hourly_All.json"))
-                .ToList();
-            
             //naive hardcoded for now...
+            //data to estimate on is not an input parameter...
             var d = AppData.GetHistoricalSeries("SystemPrice_Hourly_EUR.json");
-            
+
             var data = d.Where(x => x.DateTime < dt)
                 .Select(x => x.Value != null ? (double)x.Value : 0) //0 for now, when interpolation is done... etc..
                 .ToArray();
 
-            var th = GetTimeHorizonValue(forecastHorizon);
+            var horizon = GetTimeHorizonValue(forecastHorizon);
 
             var rlzd = d.Where(x => x.DateTime >= dt)
-                .Take(th)
+                .Take(horizon)
                 .Select(x => x.Value != null ? (double)x.Value : 0) //0 for now, when interpolation is done... etc..                
                 .ToArray();
 
@@ -141,69 +188,186 @@ namespace EMA.Controllers
             double[] forecasted;
             object model;
 
+            var oneYear = (int)Math.Floor((dt - dt.AddMonths(-12)).TotalHours);
+            var halfYear = (int)Math.Floor((dt - dt.AddMonths(-6)).TotalHours);
+
+            var seasons = new int[] { oneYear, halfYear, 24 * 7 * 4 * 3, 24 * 7 * 4, 24 * 7, 24 };
+
+            //we need always seasonalities >= forecast horizon
+            var relevantSeasons = seasons.Where(s => s >= horizon).ToArray();
+
+            double[] estimationData = null;
+
             //add naive with exogenous variables next...
-            if (forecastMethod == "Naive")
+            if (forecastingMethod == ForecastMethod.Naive)
             {
-                var halfYear = (int)Math.Floor((dt - dt.AddMonths(-6)).TotalHours);
-
-                var allses = new int[] { halfYear, 24 * 7 * 4, 24 * 7, 24 };
-
-                //we need always seasonalities > forecast horizon
-                var ses = allses.Where(s => s >= th).ToArray();
-
-                forecast = Naive(data, ses, th, confidence);
+                forecast = Naive(data, relevantSeasons, horizon, confidence);
 
                 forecasted = forecast.Forecast.Take(rlzd.Length).ToArray();
 
                 model = new object();
             }
-            else if (forecastMethod == "HWT")
+            else if (forecastingMethod == ForecastMethod.HoltWinters)
             {
-                var last3Month = data.Reverse().Take(24 * 7 * 2).Reverse().ToArray();
+                estimationData = data.Reverse().Take(24 * 7 * 2).Reverse().ToArray();
+
                 var hwparams = JsonConvert.DeserializeObject<HoltWinters.HoltWintersParams>(MathModel);
 
                 //optimize if all seem to be wrong
                 if (hwparams.alpha == 0 || hwparams.beta == 0 || hwparams.gamma == 0)
-                    hwparams = HoltWinters.OptimizeTripleHWT(last3Month, 24, th);
-                
-                forecast = HoltWinters.TripleHWTWithPIs(last3Month, 24, th, hwparams, confidence);
-               
+                    hwparams = HoltWinters.OptimizeTripleHWT(estimationData, 24, horizon);
+
+                forecast = HoltWinters.TripleHWTWithPIs(estimationData, 24, horizon, hwparams, confidence);
+
                 forecasted = forecast.Forecast.Take(rlzd.Length).ToArray();
 
                 model = hwparams;
             }
-            //else if (forecastMethod == "AR")
-            //{
-            //    var last3Month = data.Reverse().Take(24 * 7 * 4 * 3).Reverse().ToArray();
+            else if (forecastingMethod == ForecastMethod.ARMA)
+            {
+                var exogenousVariablesJs = JObject.Parse(exogenousVariables); //alternative...?
 
-            //    var arma = ARMASimple2(last3Month, new int[] { 1, 2, 24 }, new int[] { 24 });
-            //}
+                //always take next 2 highest seasons...
+                var maSes = seasons.Where(s => s >= horizon).OrderBy(x => x).Take(2).ToArray();
+                var arSes = new int[] { 1, 2, 24, 25 };
+
+                //twice as the highest season estimation data
+                var estimationDataLength = maSes.Last() * 2;
+                estimationData = data.Reverse().Take(estimationDataLength).Reverse().ToArray();
+
+                var isUnivariate = exogenousVariablesJs.Properties().Where(p => p.Value.ToString() == "True").Count() == 0;
+
+                if (isUnivariate)
+                {
+                    var arma = JsonConvert.DeserializeObject<ARMAResult>(MathModel);
+
+                    //problem: when changing param for ARMA, provide forecast, when changed date or horizon, re-estimate...yes...
+                    //fix it later
+                    if (arma.AR == null || arma.AR.Coefficients == null)
+                    {
+                    }
+
+                    arma = ARMASimple2(estimationData, arSes, maSes);
+
+                    var inSampleRes = Infer(arma, estimationData);
+
+                    forecast = MarketModels.TimeSeries.Forecast(estimationData, inSampleRes, arma, horizon, confidence);
+
+                    //when done out of sample, matches the realized and forecasted lengths to compute fit... 
+                    //if no available data, no fit can be done...
+                    forecasted = forecast.Forecast.Take(rlzd.Length).ToArray();
+
+                    //allow only AR and MA coefficients to be changed
+                    //model = new { AR = arma.AR, MA = arma.MA };
+                    model = null;
+                }
+                else
+                {
+                    var arxma = JsonConvert.DeserializeObject<ARXMAModel>(MathModel);
+
+                    var vars = exogenousVariablesJs.Properties()
+                        .Where(p => p.Value.ToString() == "True")
+                        .Select(p => p.Name)
+                        .ToList();
+
+                    var specialDaysSelected = vars.Remove("SpecialWeekDays");
+
+                    var exData = vars
+                        .Select(p =>
+                            AppData.GetHistoricalSeries(p + "_Hourly_All.json")
+                                .Where(x => x.DateTime < dt)
+                                .Select(x => x.Value != null ? (double)x.Value : 0) //0 for now, when interpolation is done... etc..
+                                .Reverse().Take(estimationDataLength + horizon).Reverse().ToArray()
+                                .ToList()
+                        ).ToList().ColumnsToRectangularArray();
+
+                    //append indicators for special data...
+                    if (specialDaysSelected)
+                    {
+                        //Friday, Saturday and Sunday
+                        var ivars = MathFunctions.IndicatorVariablesMatrix(estimationDataLength + horizon, 168, 24, new int[] { 0, 5, 6 });
+
+                        //concatenate matrices to columns
+                        if (exData.GetLength(1) > 0)
+                            exData = MathFunctions.concat2D(exData, ivars, false);
+                        else
+                            exData = ivars;
+                    }
+
+                    var exDataEst = MathFunctions.firstRows2D(exData, estimationDataLength);
+
+                    arxma = ARXMASimple2(estimationData, exDataEst, arSes, maSes);
+
+                    var inSampleRes = arxma.Infer(estimationData, exDataEst);
+
+                    forecast = arxma.Forecast(estimationData, inSampleRes, exData, horizon, confidence);
+
+                    //when done out of sample, matches the realized and forecasted lengths to compute fit... 
+                    //if no available data, no fit can be done...
+                    forecasted = forecast.Forecast.Take(rlzd.Length).ToArray();
+
+                    //allow only AR and MA coefficients to be changed
+                    //model = new { AR = arma.AR, MA = arma.MA };
+                    model = null;
+                }
+            }
             else
                 throw new ArgumentException("Unsupported argument passed");
-                                    
-            FitStatistics fit = null, bfit = null, pfit = null;
 
-            if (rlzd.Length > 0) {
+            var log = "";
+
+            if (forecast.Forecast.Any(x => x > 500))
+                log += "Some data is wrong...";
+
+            if (forecast.Forecast.HasInvalidData() || forecast.Confidence.HasInvalidData())
+                throw new Exception("Abnormal results generated");
+
+            /* Post processing */
+            //cap all values above a reasonable limit, e.g. 500
+            CapSeries(forecast.Forecast, 500, -100);
+            CapMultipleSeries(forecast.Confidence, 500, -100);
+
+            FitStatistics eFit = null, eBFit = null, ePFit = null, fit = null, bfit = null, pfit = null;
+
+            if (rlzd.Length > 0)
+            {
                 fit = ForecastFit(forecasted, rlzd);
                 pfit = ForecastFit(
-                    GetSubPeriodsFrom(forecasted, 24, DAY_PEAK_HOURS), 
+                    GetSubPeriodsFrom(forecasted, 24, DAY_PEAK_HOURS),
                     GetSubPeriodsFrom(rlzd, 24, DAY_PEAK_HOURS));
                 bfit = ForecastFit(
                     GetSubPeriodsFrom(forecasted, 24, DAY_BASE_HOURS),
                     GetSubPeriodsFrom(rlzd, 24, DAY_BASE_HOURS));
             }
 
+            if (estimationData != null && forecast.Backcast.Length > 0)
+            {
+                //model with estimation, that is: the model is different than naive
+                eFit = ForecastFit(forecast.Backcast, estimationData);
+                ePFit = ForecastFit(
+                    GetSubPeriodsFrom(forecast.Backcast, 24, DAY_PEAK_HOURS),
+                    GetSubPeriodsFrom(estimationData, 24, DAY_PEAK_HOURS));
+                eBFit = ForecastFit(
+                    GetSubPeriodsFrom(forecast.Backcast, 24, DAY_BASE_HOURS),
+                    GetSubPeriodsFrom(estimationData, 24, DAY_BASE_HOURS));
+            }
             var obj = new
-            {                
+            {
                 Result = forecast,
                 MathModel = model,
-                DaysAhead = th / 24,
+                DaysAhead = horizon / 24,
+                //in sample fit for all hours
+                EstimationFit = eFit,
+                BaseEstimationFit = eBFit,
+                PeakEstimationFit = ePFit,
                 Fit = fit,
                 BaseFit = bfit, //refine later...
-                PeakFit = pfit
+                PeakFit = pfit,
+                //additional remarks about the resulting data...
+                Log = log
             };
-        
-            return Json(obj, JsonRequestBehavior.AllowGet);        
+
+            return Json(obj, JsonRequestBehavior.AllowGet);
         }
 
         public ActionResult ForecastTest()
