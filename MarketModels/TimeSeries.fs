@@ -30,6 +30,7 @@ module TimeSeries =
         MA : LagOp; 
         Const : float; 
         Var: float
+        //TODO: merge with ARXMA or ARMAX model..
     } with 
         ///Evaluates the model on a time series by calculating next step values/residuals, alike to matlabs parts.
         ///Returns for first maxDegree 0s
@@ -138,7 +139,7 @@ module TimeSeries =
         
         let bCoeffs = Array.init (AR.Length + 1) (fun i -> if i = 0 then 1.0 else -AR.[i-1])        
         let filteredSeries = Filter1D bCoeffs [|1.0|] series   
-        
+
         //variance of the filtered series now...     
         Const <- filteredSeries |> Array.average
         let var = Statistics.Variance(filteredSeries)
@@ -365,7 +366,120 @@ module TimeSeries =
         ARX : ARXModel;
         //The moving average part
         MA : LagOp;
-    }
+    } with
+               ///Evaluates the model on a time series by calculating next step values/residuals, alike to matlabs parts.
+        ///Returns for first maxDegree 0s
+        member this.Evaluate (Y : float[]) (X : float[,]) (isOnResiduals : bool) : float[] = 
+
+            if Y.Length < X.GetLength(0) then
+                failwith "Dimensions must agree"
+
+            let maxDegree = max this.ARX.AR.Degree this.MA.Degree
+            
+            if Y.Length < maxDegree then
+                failwith "Not enough observations"
+            
+            let E = Array.zeroCreate Y.Length
+                        
+            //when calculating residuals must subtract the constant
+            let coeffsSign = if isOnResiduals then -1.0 else 1.0
+
+            //on residuals must include self 0 AR
+            let arLags = if isOnResiduals then Array.concat [| [|0|]; this.ARX.AR.Lags|] else this.ARX.AR.Lags
+            let arCoeffs = if isOnResiduals then  Array.concat [| [|-1.0|]; this.ARX.AR.Coefficients|] else this.ARX.AR.Coefficients
+
+            let coeffs = Array.concat [|[|this.ARX.Const * coeffsSign|]; arCoeffs .*. coeffsSign; this.MA.Coefficients .*. coeffsSign|]
+        
+            for i in maxDegree..Y.Length-1 do
+                //revert indices from lag form to array indices, for example [|1; 2; 24|] to [|23; 22; 0|]
+                let arIdx = Array.rev ((Array.rev arLags) |> Array.map (fun x -> - x + i))
+                let maIdx = Array.rev ((Array.rev this.MA.Lags) |> Array.map (fun x -> - x + i))
+            
+                //get the values at the specified indices
+                let data = Array.concat [| [|1.0|]; sub Y arIdx; sub E maIdx |]
+                
+                //predictors regression term
+                let predVal = this.ARX.Beta .* X.[i, *] |> sum
+                
+                //series ARMA term
+                let nextValue = data .* coeffs |> sum
+                
+                //total, adjust prediction sign based on whether we're dealing with reasiduals or not
+                let nextStepValue = coeffsSign * predVal + nextValue
+
+                if isOnResiduals then 
+                    E.[i] <- nextValue     
+                else
+                    Y.[i] <- nextValue
+
+            if isOnResiduals then 
+                E
+            else
+                Y
+        //Calculation of forecast for given data and params
+        member this.Forecast(series : float[]) (residuals : float[]) (X : float[,]) (horizon : int) (alpha : float) : ForecastResult =         
+            if series.Length + horizon <> X.GetLength(0) then
+                failwith "X must contain the in-sample predictors and the forecasted X values for the horizon (X0 and XF)"
+
+            let maxDegree = max this.ARX.AR.Degree this.MA.Degree
+
+            if horizon > maxDegree then
+                failwith "Can't forecast more than the maximum ARMA degree"
+
+            let T = horizon + maxDegree
+        
+            //from checkPresampleData... take last maxDegree observations
+            let presampleY = after series maxDegree 
+            let inY = Array.concat [|presampleY; Array.zeroCreate horizon|]
+            let inX = lastRows2D X inY.Length
+            let y = this.Evaluate inY inX false     
+
+            //confidence alpha...
+            let alphaBounds = ConfidenceAlphaBounds alpha
+            let cis = [|fst alphaBounds; alpha; snd alphaBounds|]
+
+            //we have several methods of calculating PIs... from matlab... by seasonal folding...
+            //we re not coming from infer
+            let backcast = if series.Length = residuals.Length then series .+ residuals else [||]
+            let confidence = 
+                if series.Length = residuals.Length then 
+                        let inAndOutSampleSeries = Array.concat [|series; y.[maxDegree..T-1]|]
+                        NormalPredictionIntervalsFromSeries inAndOutSampleSeries residuals horizon cis 
+                    else 
+                        array2D [||]
+
+            {
+                Backcast = backcast
+                Forecast = y.[maxDegree..T-1];
+                //each pairs level, f.ex. 95%
+                ConfidenceLevels = cis;
+                //from highest to lowest prediction intervals
+                Confidence = confidence
+            }
+        ///Calculation of residuals of an ARXMA model fit ... series and X must have same length!
+        member this.Infer (series : float[]) (X : float[,])  : float[] =    
+                
+            let maxDegree = max this.ARX.AR.Degree this.MA.Degree
+            
+            let E0 = Array.zeroCreate maxDegree
+            
+            //revert series and predictors to forecast backwards for the intialization presample period
+            let fY = Array.rev series
+            let fX1 = rev2D X true
+            
+            //assume same predictors values for presample, is that good... no!
+            let fX0 = fX1.[0..maxDegree-1,*]
+            let fX = concat2D fX0 fX1 true
+
+            //presample... practically from 0 to -maxDegree, for backcasting
+            let Y0 = (Array.rev ((this.Forecast fY E0 fX maxDegree 0.95).Forecast))
+            
+            //then couple the presample and get all residuals
+            let Y = Array.concat [| Y0; series |]
+            
+            let E = this.Evaluate Y fX true
+            
+            after E maxDegree
 
     ///estimates ARXMA model with exogenous variables calling the previous ARX model
     ///Y - nbObservations 
@@ -393,3 +507,19 @@ module TimeSeries =
             ARX = arx;
             MA = emptyAR.MA;            
         }
+
+    ///Shortcut method to avoid using LagOps, pass just the lags to be optimized...
+    let ARXMASimple2 (Y : float[]) (X : float[,]) (p : int[]) (q : int[]) : ARXMAModel =
+        let ar = {
+            Coefficients = Array.init p.Length (fun i -> 0.0);
+            Lags = p
+        }
+        
+        let ma = {
+            Coefficients = Array.init q.Length (fun i -> 0.0);
+            Lags = q
+        }
+
+        ARXMA Y X ar ma
+
+    ///Calculates model diagnostics... yes... using matlab method... etc...

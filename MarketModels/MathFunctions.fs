@@ -7,15 +7,49 @@ module MathFunctions =
     open MathNet.Numerics.Statistics
     open MathNet.Numerics.Distributions
     
+    ///Creates a matrix of length N filled with indicator values of shortPeriod length at each longPeriod 
+    let IndicatorVariablesMatrix (N : int) (longPeriod : int) (shortPeriod : int) (periodIndices : int[]) : float[,] =
+        let X = Array2D.zeroCreate N periodIndices.Length
+
+        //indicator values, 1
+        let ones = (Array.zeroCreate shortPeriod) .+. 1.0 
+
+        //function to provide de index of the ith short period at the jth long period
+        let idxStart i j = j*longPeriod + periodIndices.[i]*shortPeriod
+
+        //the amount of periods included in the total array
+        let nLen = N / longPeriod
+         
+        for j in 0..nLen-1 do
+            for i in 0..periodIndices.Length-1 do
+                let fromIdx = idxStart i j
+                let toIdx = idxStart i j + (shortPeriod-1)
+                X.[fromIdx .. toIdx, i] <- ones;
+
+        X
     ///Shorthands for those long Array methods...
     
     ///Old boring arrays sum
     let sum (vec : float[]) : float =
         vec |> Array.sum
 
-    ///Retrieves a new array formed by all the values after the specified index column 
+    ///Reverses the matrix on rows or columns direction
+    let rev2D (mat : float[,]) (onRows : bool) : float[,] = 
+        let N = mat.GetLength(0)
+        let M = mat.GetLength(1)
+        let iIdx i = if onRows then N - i - 1 else i
+        let jIdx j = if onRows then j else M - j - 1
+        Array2D.init N M (fun i j -> mat.[iIdx i, jIdx j])
+
+    ///Retrieves a new array formed by all the values after the specified index row... 
     let afterRows2D (vec : float[,]) (index : int) : float[,] =
         vec.[index..vec.GetLength(0) - 1, *]
+
+    let firstRows2D (mat : float[,]) (n : int) : float[,] =
+        mat.[0..n - 1, *]
+
+    let lastRows2D (mat : float[,]) (n : int) : float[,] =
+        mat.[mat.GetLength(0) - n..mat.GetLength(0) - 1, *]
 
     ///Concatenates matrices as per rows or per columns
     let concat2D (mat1 : float[,]) (mat2 : float[,]) (toRows : bool) : float[,] = 
@@ -32,9 +66,17 @@ module MathFunctions =
             Array2D.init (mat1.GetLength(0)) (mat1.GetLength(1) + mat2.GetLength(1)) 
                 (fun i j -> if j < mat1.GetLength(1) then mat1.[i, j] else mat2.[i , j - mat1.GetLength(1)])
 
-    ///Retrieves a new array formed by all the values after the specified index
+    ///Retrieves a new array formed by all the values after and including the specified index.
     let after (vec : float[]) (index : int) : float[] =
         vec.[index..vec.Length - 1]
+
+    ///Retrieves a new array formed by all the values strictly before the specified index, thereby excluding it.
+    let before (vec : float[]) (index : int) : float[] =
+        vec.[0..index - 1]
+
+    //Initializes an new array of n length with the specified value, aking to zeroCreate
+    let valueCreate (n : int) (value : float) : float[] =
+        Array.init n (fun i -> value)
 
     ///Retrieves a new array formed by all the values at the specified indices
     let sub (vec : float[]) (indices : int[]) : float[] =
@@ -226,5 +268,39 @@ module MathFunctions =
     ///Returns a matrix where each column is the series lagged by each given lag value
     ///Initial values are NaN, the rest of series is truncated
     let LaggedMatrix (series : float[]) (lags : int[]) : float[,] =
-        Array2D.init series.Length lags.Length (fun i j -> if i < lags.[j] then nan else series.[i-lags.[j]])
+        Array2D.init series.Length lags.Length (fun i j -> if i < lags.[j] then nan else series.[i-lags.[j]]) 
+
+    type MovingAverageType = Simple | Exponential
+    
+    ///Simple alternative to Filter1D... MAt = Average(St-1..St-lag)
+    let MovAvg (series : float[]) (lag : int) : float[] =
+        Array.init series.Length (fun i-> if i = 0 then series.[0] else series.[max 0 (i-lag)..i-1] |> mean)
+
+     ///Returns a moving standard deviation with nans for lag
+    let MovingStandardDeviationInner (series : float[]) (maType : MovingAverageType) (lag : int) (dim : int) : float[] =
+        let nansIndex = 2*lag - dim 
+
+        if series.Length < nansIndex then
+            failwith "Not enough observations, the result will be filled with nans"
+                
+        let filteredSeries = MovAvg series lag  
         
+        //squared residuals of the first moving average
+        let residuals = (series -- filteredSeries) ^^ 2.0
+        
+        //filter residuals again
+        let result = MovAvg residuals lag
+        
+        //square results and preappend nans...
+        Array.concat [|valueCreate nansIndex nan ; after result nansIndex|]  ^^ 0.5
+
+    ///Returns a moving standard deviation with no nans, by using backward estimation
+    let MovingStandardDeviation (series : float[]) (maType : MovingAverageType) (lag : int) (dim : int) : float[] =
+        let nansIndex = 2*lag - dim 
+
+        //calculate backwards then revert the result
+        let preRes = Array.rev (MovingStandardDeviationInner (Array.rev series) maType lag dim)
+        //calculate forward the rolling SD
+        let res = MovingStandardDeviationInner series maType lag dim
+
+        Array.concat [|before preRes nansIndex ; after res nansIndex |] 

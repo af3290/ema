@@ -65,9 +65,9 @@
     <Compile Include="Optimization.fs" />
     <Compile Include="SolverModel.fs" />
     <Compile Include="GasValuation.fs" />
-    <Compile Include="Preprocess.fs" />
     <Compile Include="TimeSeries.fs" />
     <Compile Include="HoltWinters.fs" />
+    <Compile Include="Preprocess.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="alglibnet2">
