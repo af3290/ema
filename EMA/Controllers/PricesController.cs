@@ -18,6 +18,14 @@ namespace EMA.Controllers
 {
     public class PricesController : Controller
     {
+        /* Nordpoolspot */
+        private string _timeSeries = "SystemPrice_Hourly_EUR.json";
+        private string _exVarsPre = @"";
+
+        /* Weron California prices... */
+        //private string _timeSeries = @"CA\Price_Hourly.json";
+        //private string _exVarsPre = @"CA\";
+
         //TODO: add uniqueStructure only for non overlapping short contracts to take priority
         public JsonResult ForwardCurve(string region, bool nonOverlapping)
         {
@@ -26,55 +34,38 @@ namespace EMA.Controllers
             return Json(fc, JsonRequestBehavior.AllowGet);
         }
 
-        public JsonResult HistoricalSystemPrice(bool refresh, int resolution)
+        public JsonResult HistoricalSystemPrice(bool refresh, string resolution)
         {
-            if (resolution == 5)//because of bullshit F# types... dummy for now... fix later
+            if (resolution == "5")//because of bullshit F# types... dummy for now... fix later
             {
-                var d = AppData.GetHistoricalSeries("SystemPrice_Hourly_EUR.json");
-                return Json(d, JsonRequestBehavior.AllowGet);
+                var h = AppData.GetHistoricalSeries(_timeSeries);
+                return Json(h, JsonRequestBehavior.AllowGet);
             }
 
             //TODO: aggregate to daily... does it make sense?
-            var dailyHistoricalPrices = AppData.GetHistoricalSeries("SystemPrice_Hourly_EUR.json");
+            var dailyHistoricalPrices = AppData.GetHistoricalSeriesDaily(_timeSeries);
 
             return Json(dailyHistoricalPrices, JsonRequestBehavior.AllowGet);
         }
 
         [HttpPost]
-        public JsonResult GasFutures(DateTime? date,
-            DateTime? afterDate, DateTime? beforeDate,
-            DateTime? afterMaturity, DateTime? beforeMaturity)
+        public JsonResult GasFutures(DateTime? date, int forwardSteps)
         {
             var x = AppData.GasForwards()
                 .OrderBy(ts => ts.Maturity)
                 .ToList();
 
-            if (afterMaturity.HasValue)
-            {
+            var dt = date.HasValue ? date.Value : DateTime.Today;
 
-            }
+            DateTime afterMaturity = new DateTime(dt.Year, dt.Month, 1).AddMonths(1);
+            DateTime beforeMaturity = new DateTime(dt.Year, dt.Month, 1).AddMonths(forwardSteps);
 
-            if (beforeMaturity.HasValue)
-            {
+            //typically the next month after last trading datetime is the maturity
+            x = x.Where(t => afterMaturity <= t.Maturity && t.Maturity <= beforeMaturity).ToList();
 
-            }
-
-            if (beforeMaturity.HasValue && afterMaturity.HasValue)
-            {
-                //typically the next month after last trading datetime is the maturity
-                //x = x.Where(t => afterMaturity <= t.Maturity && t.Maturity <= beforeMaturity).ToList();
-            }
-
-            if (date.HasValue)
-            {
-                //too inefficient?
-                //all futures that have data at the available at datetime, all futures which represent maturities to this spot datetime
-                x = x.Where(t => t.Prices.First().DateTime <= date && date <= t.Prices.Last().DateTime).ToList();
-
-                //but truncate to show data only until now... makes sense?
-                //x = x.Select( t =>)
-            }
-
+            //all futures that have data at the available at datetime, all futures which represent maturities to this spot datetime
+            x = x.Where(t => t.Prices.First().DateTime <= date && date <= t.Prices.Last().DateTime).ToList();                
+            
             return Json(x, JsonRequestBehavior.AllowGet);
         }
 
@@ -118,7 +109,7 @@ namespace EMA.Controllers
             if (spikesPreprocess != SpikePreprocess.None)
             {
 
-                var d = AppData.GetHistoricalSeries("SystemPrice_Hourly_EUR.json");
+                var d = AppData.GetHistoricalSeries(_timeSeries);
 
                 var data = d
                     .Select(x => x.Value != null ? (double)x.Value : 0) //0 for now, when interpolation is done... etc..
@@ -138,12 +129,13 @@ namespace EMA.Controllers
 
                 if(spikesPreprocess.IsLimited)
                 {
-
+                    //limits... interpolate between clusters... yeah...
                 }
 
                 if (spikesPreprocess.IsSimilarDay)
                 {
-
+                    //last week's corresponding day shown
+                    
                 }
             }
 
@@ -157,25 +149,39 @@ namespace EMA.Controllers
         }
 
         [HttpPost]
-        public JsonResult Forecast(DateTime? date, string forecastMethod, string forecastModel,
-            string timeHorizon, double confidence, string MathModel, string exogenousVariables)
+        public JsonResult Forecast(DateTime? date, string forecastMethod, string spikesPreprocessMethod, double spikesThreshold, 
+            string forecastModel, string timeHorizon, double confidence, string MathModel, string exogenousVariables)
         {
             var dt = date.HasValue ? date.Value : DateTime.Today;
             var ths = GetUnionCaseNames<Types.TimeHorizon>();
 
             var forecastHorizon = Array.IndexOf(ths, timeHorizon);
             var forecastingMethod = GetUnionCaseFromName<ForecastMethod>(forecastMethod);
-
+            
             if (forecastHorizon < 0)
                 throw new ArgumentException("Wrong argument");
 
             //naive hardcoded for now...
             //data to estimate on is not an input parameter...
-            var d = AppData.GetHistoricalSeries("SystemPrice_Hourly_EUR.json");
+            var d = AppData.GetHistoricalSeries(_timeSeries);
 
             var data = d.Where(x => x.DateTime < dt)
                 .Select(x => x.Value != null ? (double)x.Value : 0) //0 for now, when interpolation is done... etc..
                 .ToArray();
+
+            var spikesPreprocess = GetUnionCaseFromName<SpikePreprocess>(spikesPreprocessMethod);
+
+            if(spikesPreprocess.IsSimilarDay)
+            {
+                //First deseasonalize data at larger lags, all >= weekly, a stable series is need since spikes are at lengths <= day
+                var desezonalizedData = Desezonalize(data, 168);
+
+                //Then perform the spike estimation 
+                var spikeIndices = EstimateSpikesOnMovSDs(desezonalizedData, 24, 2, spikesThreshold);
+
+                //go ahead and pre process the d series... yeah...
+                data = ReplaceSingularSpikes(data, spikeIndices, spikesPreprocess, 0.95);
+            }
 
             var horizon = GetTimeHorizonValue(forecastHorizon);
 
@@ -274,7 +280,7 @@ namespace EMA.Controllers
 
                     var exData = vars
                         .Select(p =>
-                            AppData.GetHistoricalSeries(p + "_Hourly_All.json")
+                            AppData.GetHistoricalSeries(_exVarsPre + p + "_Hourly_All.json")
                                 .Where(x => x.DateTime < dt)
                                 .Select(x => x.Value != null ? (double)x.Value : 0) //0 for now, when interpolation is done... etc..
                                 .Reverse().Take(estimationDataLength + horizon).Reverse().ToArray()
@@ -368,11 +374,6 @@ namespace EMA.Controllers
             };
 
             return Json(obj, JsonRequestBehavior.AllowGet);
-        }
-
-        public ActionResult ForecastTest()
-        {
-            return View();
         }
     }
 }

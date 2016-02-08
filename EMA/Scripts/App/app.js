@@ -12,7 +12,7 @@ emaDemos.directive('datetimez', function () {
 
             if (scope[element.attr("ng-model")] != undefined && scope[element.attr("ng-model")].constructor == Date)
                 defaultDate = moment(scope[element.attr("ng-model")]);
-            if (scope[element.attr("ng-model")+"Min"] != undefined && scope[element.attr("ng-model")+"Min"].constructor == Date)
+            if (scope[element.attr("ng-model") + "Max"] != undefined && scope[element.attr("ng-model") + "Max"].constructor == Date)
                 maxDate = moment(scope[element.attr("ng-model")+"Max"]);
             if (scope[element.attr("ng-model") + "Min"] != undefined && scope[element.attr("ng-model") + "Min"].constructor == Date)
                 minDay = moment(scope[element.attr("ng-model")+"Min"]);

@@ -22,8 +22,9 @@ namespace EMA.Controllers
             var exVar = new string[] {
                 "SpecialWeekDays",
                 "Production", "Production-Prognosis",
-                "Consumption", "Consumption-Prognosis",
-                "Wind", "Hydro"};
+                //"Consumption", "Consumption-Prognosis",
+                //"Wind", "Hydro"
+            };
             var exVarJs = JsonConvert.SerializeObject(exVar);
             ViewBag.ExogenousVariables = exVarJs;
             return View();
@@ -43,6 +44,10 @@ namespace EMA.Controllers
         {
             return View();
         }
-        
+
+        public ActionResult PowerPurchaseAgreement()
+        {
+            return View();
+        }        
     }
 }
