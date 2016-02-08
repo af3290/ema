@@ -84,6 +84,20 @@ namespace EMA.Misc
             return d;
         }
 
+        public static List<HistoricalPrice> GetHistoricalSeriesDaily(string series)
+        {
+            var d = GetHistoricalSeries(series);
+            var sdt = d.First().DateTime;
+            var days = d.Count / 24;
+            var dailyHistoricalPrices = new List<HistoricalPrice>();
+            for (int i = 0; i < days; i++)
+            {
+                var dayData = d.Skip(i * 24).Take(24);
+                dailyHistoricalPrices.Add(new HistoricalPrice() { DateTime = sdt.AddDays(i), Value = (decimal)dayData.Select(x => x.Value).Average() });
+            }
+            return dailyHistoricalPrices;
+        }
+
         public static List<TimeSeries> GasForwards()
         {
             var files = Directory.EnumerateFiles(GetAppDataServerPath() + @"\Gas\");
