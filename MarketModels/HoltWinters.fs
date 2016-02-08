@@ -5,7 +5,8 @@ module HoltWinters =
     open Operations
     open MathFunctions
     open Forecast
-    
+    open Optimization
+
     ///Triple seasonal Holt Winters method, additive version (for multiplicative use use natural logarithm)
     ///Returns original data and the forecasted values appended
     let TripleHWT (data : float[]) (seasonLength : int) (nbForecastSteps :int) (alpha : float) (beta : float) (gamma : float) : float[] =
@@ -89,24 +90,22 @@ module HoltWinters =
         let hwOptim = (fun alpha beta gamma -> 
             let res = TripleHWT data seasonLength nbForecastSteps alpha beta gamma
             let rmse = RMSE res.[0..data.Length-1] data
+            //this doesn't seem to be the solution... NO NO NO...
+            //let rmse = -MathNet.Numerics.GoodnessOfFit.RSquared(res.[0..data.Length-1], data)
             rmse
         )
 
         //initial parameters values, updated with the optimal values afterwards
-        let mutable values = [|0.5; 0.4; 0.6|]        
-        let mutable state : alglib.minbleicstate = null
-        let mutable rep : alglib.minbleicreport = null
+        let mutable initialValues = [|0.5; 0.4; 0.6|]
+
+        let bounds = array2D [| [|0.001; 0.001; 0.001|]; [|0.999; 0.999; 0.999|] |]
 
         let optimFunc : alglib.ndimensional_func = new alglib.ndimensional_func(fun x funcRes obj -> 
             funcRes <- hwOptim x.[0] x.[1] x.[2]
         )
-
-        alglib.minbleiccreatef(3, values, 1.0e-6, &state)
-        alglib.minbleicsetbc(state, [|0.001; 0.001; 0.001|], [|0.999; 0.999; 0.999|])
-        alglib.minbleicsetcond(state, 0.0000000001, 0.0, 0.0, 0);
-        alglib.minbleicoptimize(state, optimFunc, null, null);
-        alglib.minbleicresults(state, &values, &rep);
-
+                       
+        let values = ConstrainedMultivariateWithBounds initialValues bounds optimFunc
+       
         {
             alpha = values.[0];
             beta = values.[1];
