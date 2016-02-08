@@ -2,8 +2,12 @@
 
 module Simulations =
     open System
+    open Types
     open MathFunctions
     open StochasticProcesses
+    open Operations
+    open Optimization
+    open Forecast
     open MathNet
     open MathNet.Numerics.Statistics
     open MathNet.Numerics
@@ -15,6 +19,11 @@ module Simulations =
     open MathNet.Numerics.LinearAlgebra.MatrixExtensions
     open MathNet.Numerics.LinearAlgebra.DenseMatrix
     //TODO: add the rest of the models! YES!
+
+    let MinimumSimulationsCountForNormalConfidenceOf (mu : float) (sigma : float) (alpha : float) : int =
+        let z = - Normal.InvCDF(0.0, 1.0, (1.0 - alpha) / 2.0)
+        let value = ((2.0 * z * sigma) / mu ) ** 2.0
+        (int)(Math.Floor value)
 
     let dailyLongTermMean (daysInEachMonthArray : int[]) (priceCurve : float[]) = 
         let numOfMonths = priceCurve.Length
@@ -121,7 +130,6 @@ module Simulations =
         )
 
         curveSimulations priceCurve corrs numOfCurvesToSimulate deltaT
-            
 
 
 
