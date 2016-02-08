@@ -1,0 +1,169 @@
+﻿@using EMA.Helpers
+@using MarketModels;
+@{
+    ViewBag.Title = "Spot Price Forecast";
+}
+
+<style>
+    #model-details table {
+        width: 100%;
+    }
+</style>
+
+<script>
+    SERVER_CONSTANTS = {
+        TimeHorizons: @(Html.EnumTypeToJavascript<Types.TimeHorizon>())
+    };
+</script>
+
+<script src="~/Scripts/App/powerPurchaseAgreement.js"></script>
+
+<div ng-controller="ForecastController">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="panel-header">
+                <h2><a data-toggle="modal" data-target="#demoDescription">Power Purchase Agreement</a></h2>
+            </div>
+            <div class="panel">
+                <h3 data-toggle="tooltip" data-placement="right" title="Demo parameters">Parameters</h3>
+                <form class="form-horizontal">                    
+                    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                            { "Id", "horizon" }, { "Label", "Time Horizon (Years)" },
+                                            { "Tooltip", "Time horizon for valuation"} });}
+                    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                            { "Id", "capacity" }, { "Label", "Capacity (MWh)" },
+                                            { "Tooltip", "Capacity of the wind park"} });}
+                    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                            { "Id", "retailPrice" }, { "Label", "Retail Price (UER)" },
+                                            { "Tooltip", "Price of resale, acts like strike price"} });}
+                    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                            { "Id", "margin" }, { "Label", "Margin (EUR)" },
+                                            { "Tooltip", "Margin earned by the broker"} });}
+                    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                            { "Id", "confidence" }, { "Label", "Confidence (%)" },
+                                            { "Tooltip", "Confidence value at which results are calculated"} });}
+                </form>
+                @{Html.RenderPartial("~/Views/Components/MathModel.cshtml");}
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="panel-header">
+                <h2>Result</h2>
+            </div>
+            <div class="panel">                
+                <div id="model-details" class="row">
+                    <ul class="nav nav-tabs">
+                        <li class="active"><a href="#3dcurves-tab" data-toggle="tab">Spot Simulation<i class="fa"></i></a></li>
+                        <li><a href="#hours-tab" data-toggle="tab">Value Distribution <i class="fa"></i></a></li>
+                    </ul>
+                    <div class="tab-content">
+                        <div id="3dcurves-tab" class="tab-pane active">
+                            <div id="container" style="height: 400px; width: 100%"></div>
+                        </div>
+                        <div id="hours-tab" class="tab-pane">
+                            @{Html.RenderPartial("~/Views/Components/Histogram.cshtml", null, new ViewDataDictionary(){
+                                            {"Title", "Forecast Summary" }, { "ModelName", "Fit" }});}
+                        </div>
+                        <div id="profile-tab" class="tab-pane">
+                            @{Html.RenderPartial("~/Views/Components/OptionPlot.cshtml", null, new ViewDataDictionary(){
+                                            {"Title", "Forecast Summary" }, { "ModelName", "Fit" }});}
+                        </div>
+                    </div>                    
+                </div>
+                <div id="xxxmodel-details" class="row">
+                    <div class="col-md-6">
+                        <h3>Contract Valuation Summary</h3>
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <td></td>
+                                    <td>Value</td>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Number of simulations</td>
+                                    <td>
+                                        {{Results.NbSims}}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Value</td>
+                                    <td>
+                                       {{Results.Value}} {{Currency}}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="demoDescription" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h2 class="modal-title" id="myModalLabel">Price Forecasting Demo Description</h2>
+            </div>
+            <div class="modal-body">
+                <p>
+                    Valuation of a power purchasing agreement
+                </p>
+                
+                <h2>Electricity price simulation</h2>
+                <h3>Wind simulation</h3>
+                <p>
+                    As a benchmarking method the naive approach has fundamental importance. It takes previous season's prices
+                    and averages them to compute the forecast. Previous day, previous week's today, previous month's today,
+                    previous year's today are included, the variation constitutes the basis for the construction of normally distributed
+                    prediction intervals.
+                    <div class="tex2jax_process" style="">
+                        $$ Y_{t+h} = Average(\{Y_{t-i}|i = 0, 24, 168, 672, 8760\}) $$
+                        $$ \text{h}\text{ is the forecast horizon. } $$
+                    </div>
+                </p>
+                <h3>Spot Price Simulation</h3>
+                <p>
+                    Mean reversion model...
+                    <div class="tex2jax_process" style="">
+                    </div>
+                    Estimation is done using a bounded linear function optimizer that minimizes the associated
+                    RMSE within reasonable bounds.
+                </p>
+                               
+                <hr />
+
+                <h3>Limitations</h3>
+                1. Multiple regimes or heteroskedasticity concerns are ignored.<br />
+                2. Outages and other short term constraints are not included. <br />
+                3. Area prices and other relevant variables (such as flow constraints or exchange rates) are ignored. <br />
+                <hr />
+
+                <h3>References</h3>
+                [1] - Weron, R., Misiorek, A. Forecasting spot electricity prices: A comparison of
+                parametric and semiparametric time series models. International Journal of Forecasting. October
+                2008, Vol. 24.
+                <br />
+                [2] - Taylor, J.W. (2003) Short-term electricity demand forecasting using double seasonal exponential
+                smoothing, Journal of Operational Research Society 54, 799–805.
+                <br />
+                [3] - Winters, P. R. (April 1960) Forecasting Sales by Exponentially Weighted Moving Averages", 
+                Management Science 
+                <br />
+                [4] - Box, G. E. P., G. M. Jenkins, and G. C. Reinsel. Time Series
+                Analysis: Forecasting and Control. 3rd edition. Upper Saddle River,
+                NJ: Prentice-Hall, 1994.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,147 @@
+﻿<script>
+    function createHistogram() {
+        var chart = $('#container-histogram').highcharts({
+            chart: {          
+            },
+            tooltip: {
+                valueDecimals: 4
+            },
+            title: {
+                text: 'Contract Value'
+            },
+            series: [],
+            //column: {
+            //    shadow: false,
+            //    borderWidth: .5,
+            //    borderColor: '#666',
+            //    pointPadding: 0,
+            //    groupPadding: 0,
+            //    color: 'rgba(204,204,204,.85)'
+            //},
+            xAxis: {
+                categories: [],
+                labels: {
+                    rotation: -90,
+                    y: 40,
+                    style: {
+                        fontSize: '8px',
+                        fontWeight: 'normal',
+                        color: '#333'
+                    },
+                },
+                lineWidth: 0,
+                lineColor: '#999',
+                tickLength: 70,
+                tickColor: '#ccc',
+            },
+            yAxis: {
+                title: { text: 'Probability (%)' },
+                //maxPadding:0,
+                gridLineColor: '#e9e9e9',
+                tickWidth: 1,
+                tickLength: 3,
+                tickColor: '#ccc',
+                lineColor: '#ccc',
+                tickInterval: 25,
+                //endOnTick:false,
+            },
+        });
+
+        return $('#container-histogram').highcharts();
+    }
+
+    function plotDataToHistogram(chart, data) {
+        clearSeriesContainingName(chart, "Value");
+        var priceData = [];
+        var counts = Enumerable.From(data._buckets).Select("b => b.Count").ToArray();
+        var countSum = Enumerable.From(data._buckets).Select("b => b.Count").Sum();
+        var midsVals = Enumerable.From(data._buckets)
+            .Select(function (b) { return (b.LowerBound + b.UpperBound) / 2.0 })
+            .ToArray();
+        var mids = Enumerable.From(data._buckets)
+            .Select(function (b) { return prcFrmt((b.LowerBound + b.UpperBound) / 2.0) + " EUR" })
+            .ToArray();
+        var densities = [];
+        var categories = ['value < ' + mids[0]];
+
+        for (var i = 0; i < data._buckets.length; i++) {
+            densities[i] = counts[i] / countSum;
+            if(1<i && i< data._buckets.length-1)
+                categories[i] = mids[i - 1] + ' <= value < ' + mids[i + 1]
+            if (i == data._buckets.length - 1)
+                categories[i] = mids[i] + ' <= value '
+        }
+        var CDF = [densities[0]];
+        var lower95 = undefined, lower90 = undefined, median = undefined;
+
+        for (var i = 1; i < data._buckets.length; i++) {
+            CDF[i] = CDF[i - 1] + densities[i];
+            if (CDF[i] > 0.05 && lower95 == undefined)
+                lower95 = midsVals[i];
+            if (CDF[i] > 0.1 && lower90 == undefined)
+                lower90 = midsVals[i];
+            if (CDF[i] > 0.5 && median == undefined)
+                median = midsVals[i];
+        }
+
+        for (var i = 0; i < data._buckets.length; i++) {
+            priceData[i] = [midsVals[i], counts[i]];
+        }
+
+        var serie = {
+            name: "Value",
+            type: "spline",
+            color: '#CFCFCF',
+            data: priceData,
+            tooltip: {
+                valueDecimals: 4
+            }
+        };
+
+        //chart.xAxis[0].setCategories(categories, true);
+
+        chart.addSeries(serie);        
+
+        //Probability lines...
+        chart.xAxis[0].removePlotLine('p95');
+        chart.xAxis[0].addPlotLine({
+            id: 'p95',
+            label: {
+                text: "95% Lower Bound",
+                verticalAlign: 'top',
+                textAlign: 'center'
+            },
+            color: 'red', // Color value
+            value: lower95, // Value of where the line will appear
+            width: 2 // Width of the line
+        });
+
+        chart.xAxis[0].removePlotLine('p90');
+        chart.xAxis[0].addPlotLine({
+            id: 'p90',
+            label: {
+                text: "90% Lower Bound",
+                verticalAlign: 'top',
+                textAlign: 'center'
+            },
+            color: 'yellow',
+            value: lower90,
+            width: 2
+        });
+
+        chart.xAxis[0].removePlotLine('p50');
+        chart.xAxis[0].addPlotLine({
+            id: 'p50',
+            label: {
+                text: "50% Median",
+                verticalAlign: 'top',
+                textAlign: 'center'
+            },
+            color: 'blue',
+            value: median,
+            width: 1
+        });
+    }
+</script>
+
+<div id="container-histogram" style="height: 400px; width: 100%;"></div>
