@@ -2,12 +2,12 @@
 
 module Optimization =
     open System
+    open Operations
     open MathNet.Numerics.LinearAlgebra
     open MathNet.Numerics.LinearAlgebra.Double
     open MathNet.Numerics.LinearAlgebra.Matrix
     open MathNet.Numerics.LinearAlgebra.MatrixExtensions
-    open MathNet.Numerics.LinearAlgebra.DenseMatrix
-    open Operations
+    open MathNet.Numerics.LinearAlgebra.DenseMatrix    
 
     ///Function corresponding to matlab's lsqlin, relying on alglib's quadprogramming core method, simplified,
     ///It just restates the problem in quadratic terms, uses 'medium-scale: active-set' approach.
@@ -57,5 +57,22 @@ module Optimization =
         alglib.minqpresults(state, &x0, &rep);
 
         x0
+       
+    let ConstrainedMultivariateWithBounds (funcParams : float[]) (funcParamsBounds : float[,]) (func : alglib.ndimensional_func) : float[] =
+        let funcNbParams = funcParams.Length
         
+        //initial parameters values, updated with the optimal values afterwards
+        let mutable values = Array.init funcNbParams (fun i -> funcParams.[i])
+        let mutable state : alglib.minbleicstate = null
+        let mutable rep : alglib.minbleicreport = null
+        
+        let bndl = funcParamsBounds.[0, *]
+        let bndu = funcParamsBounds.[1, *]
 
+        alglib.minbleiccreatef(funcNbParams, values, 1.0e-6, &state)
+        alglib.minbleicsetbc(state, bndl, bndu)
+        alglib.minbleicsetcond(state, 0.0000000001, 0.0, 0.0, 0);
+        alglib.minbleicoptimize(state, func, null, null);
+        alglib.minbleicresults(state, &values, &rep);
+        
+        values

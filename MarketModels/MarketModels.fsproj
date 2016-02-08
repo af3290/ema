@@ -57,17 +57,19 @@
     <Compile Include="MathFunctions.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="StochasticProcesses.fs" />
-    <Compile Include="Simulations.fs" />
+    <Compile Include="Optimization.fs" />
     <Compile Include="PrincipalComponentAnalysis.fs" />
     <Compile Include="Forecast.fs" />
+    <Compile Include="Simulations.fs" />
     <Compile Include="SolverExtensions.fs" />
     <Compile Include="MarketClearing.fs" />
-    <Compile Include="Optimization.fs" />
     <Compile Include="SolverModel.fs" />
     <Compile Include="GasValuation.fs" />
     <Compile Include="TimeSeries.fs" />
     <Compile Include="HoltWinters.fs" />
     <Compile Include="Preprocess.fs" />
+    <Compile Include="Estimation.fs" />
+    <Compile Include="Electricity.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="alglibnet2">

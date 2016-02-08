@@ -13,7 +13,7 @@ module StochasticProcesses =
     //TODO: all should use MathNet.Numerics.Matrix and related types... yes...
 
     let getStandardNormalSampleMatrix (rows : int) (cols : int) = 
-        let dist = new Normal()
+        let dist = new Normal()        
         dist.RandomSource.Next() |> ignore
         let samples = dist.Samples()
         let resultMatrix = Array.init rows (fun i -> Array.init cols (fun j -> samples |> Seq.nth (i*(cols+1)+j)))
@@ -44,6 +44,13 @@ module StochasticProcesses =
 
         correlatedSimulations
 
+    ///An OU Step 
+    type OU = {
+        lambda: float; 
+        mu: float; 
+        sigma :float
+    }
+
     let singleOUStep currentValue wienerTerm (deltaT : float) kappa mu sigma =
         let sigmaAdjustment = if kappa = 0. then sigma*sqrt(deltaT) else sigma*sqrt((1.-exp(-2.*kappa*deltaT))/(2.*kappa))
         let meanValue = currentValue*exp(-kappa*deltaT) + mu*(1.-exp(-kappa*deltaT))
@@ -54,6 +61,12 @@ module StochasticProcesses =
     let singleMeanRevertingGBMStep currentValue wienerTerm deltaT kappa mu sigma =
         let sigmaAdjustment = if kappa = 0. then sigma*sigma*deltaT/2. else sigma*sigma/4./kappa*(1.-exp(-2.*kappa*deltaT))
         exp(-sigmaAdjustment)*exp(singleOUStep (log (currentValue) + sigmaAdjustment) wienerTerm deltaT kappa ((log mu) + sigmaAdjustment) sigma)   
+        
+    let generateMeanRevertingPath (currentPrice : float) (wienerProcess : float[]) (deltaT : float) (kappa : float) (mu : float) (sigma : float) = 
+        wienerProcess |> Array.scan(fun prevVal w -> singleMeanRevertingGBMStep prevVal w deltaT kappa mu sigma) currentPrice 
+
+    let generateMeanRevertingPathWithSigmas (currentPrice : float) (wienerProcess : float[]) (deltaT : float) (kappa : float) (mu : float) (sigmas : float[]) = 
+        (wienerProcess, sigmas) ||> Array.zip |> Array.scan(fun prevVal (w, sigma) -> singleMeanRevertingGBMStep prevVal w deltaT kappa mu sigma) currentPrice 
 
     let generateMeanRevertingGMBPath (currentPrice : float)(wienerProcess : float[]) (deltaT : float) (kappa : float) (longTermMeans : float[]) (sigma : float) = 
         (wienerProcess, longTermMeans) ||> Array.zip |> Array.scan(fun prevVal (w, mu) -> singleMeanRevertingGBMStep prevVal w deltaT kappa mu sigma) currentPrice 

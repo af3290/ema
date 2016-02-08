@@ -33,6 +33,10 @@ module MathFunctions =
     let sum (vec : float[]) : float =
         vec |> Array.sum
 
+    ///Old boring arrays sum
+    let sum2D (mat : float[,]) : float =
+        Array.init (mat.GetLength(0)) (fun i -> mat.[i, *] |> sum) |> sum
+
     ///Reverses the matrix on rows or columns direction
     let rev2D (mat : float[,]) (onRows : bool) : float[,] = 
         let N = mat.GetLength(0)

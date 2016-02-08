@@ -16,12 +16,14 @@ module Types =
 
     type Resolution = Yearly | Quarterly | Monthly | Weekly | Daily | Hourly
 
-    type TimeHorizon = DayAhead | WeekAhead | MonthAhead | QuarterAhead | YearAhead
+    type TimeHorizon = DayAhead | WeekAhead | MonthAhead
 
-        //CONSTANTS...
+    //CONSTANTS...
     let DAY_PEAK_HOURS = [seq { 6..10 }; seq { 16..20 }] |> Seq.concat |> Seq.toArray
 
     let DAY_BASE_HOURS = [seq { 0..5 }; seq { 11..15 }; seq { 21..23 }] |> Seq.concat |> Seq.toArray
+
+    let PI = Math.PI
 
     let GetTimeHorizonValue (ithTimeHorizon:int) = 
         match ithTimeHorizon with
