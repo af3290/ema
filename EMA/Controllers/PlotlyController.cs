@@ -156,5 +156,27 @@ namespace EMA.Controllers
                 Z = JsonConvert.SerializeObject(Y),
             };
         }
+
+        public ActionResult DensityPlot(string seriesX, string seriesY, DateTime? from, DateTime? to, string resolution, string others)
+        {
+            var p = AppData.GetHistoricalSeriesDailyValues(seriesX);
+            var l = AppData.GetHistoricalSeriesDailyValues(seriesY);
+
+            var minLen = Math.Min(p.Count, l.Count);
+
+            if (minLen < 1)
+                throw new Exception("Not enough data");
+
+            p = p.Take(minLen).ToList();
+            l = l.Take(minLen).ToList();
+
+            ViewBag.Y = JsonConvert.SerializeObject(p);
+            ViewBag.X = JsonConvert.SerializeObject(l);
+
+            if (others == "demo")
+                return View();
+
+            return View();        
+        }
     }
 }
