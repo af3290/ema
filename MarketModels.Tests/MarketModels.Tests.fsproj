@@ -53,8 +53,10 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="TestData.fs" />
-    <Compile Include="TimeSeriesTests.fs" />
     <Content Include="packages.config" />
+    <Compile Include="SimulationsTests.fs" />
+    <Compile Include="TimeSeriesTests.fs" />
+    <Compile Include="StochasticProcessesTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
