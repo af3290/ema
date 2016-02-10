@@ -55,6 +55,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Operations.fs" />
     <Compile Include="MathFunctions.fs" />
+    <Compile Include="JaggedArray.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="StochasticProcesses.fs" />
     <Compile Include="Optimization.fs" />
@@ -70,6 +71,8 @@
     <Compile Include="Preprocess.fs" />
     <Compile Include="Estimation.fs" />
     <Compile Include="Electricity.fs" />
+    <Compile Include="ARIMAX.fs" />
+    <Compile Include="GARCH.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="alglibnet2">
