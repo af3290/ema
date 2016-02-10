@@ -1,0 +1,102 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="panel-header">
+            <h2>Electricity</h2>
+        </div>
+        <div class="panel">
+            <h3>Spot Market Analysis</h3>
+            <p>
+                Various key observations about the supply and demand system curves (such as sensitivity analysis).
+                Supply curve generation components, marginal costs and other relevant analytics.
+            </p>
+            <p>
+                <a class="btn btn-default" href="/EnergyMarkets/SpotCurvesAnalysis">Supply & Demand Analysis &raquo;</a>
+            </p>
+            <h3>Short-term Price Forecasting</h3>
+            <p>
+                High accuracy period-ahead price forecasting based on a multivariate model including a wide array of
+                variables(e.g. production, wind, gas) based on flexible parameters and multiple approaches.
+            </p>
+            <p>
+                <a class="btn btn-default" href="/EnergyMarkets/SpotPriceForecast">Day-Ahead Forecast &raquo;</a>
+            </p>
+            <h3>Spot Price Simulation</h3>
+            <p>
+                Modelling and simulation of all foward market (forward contracts) based on a model
+                that matches information from the whole structure (e.g. options, emissions) and multiple time resolutions.
+            </p>
+            <p>
+                <a class="btn btn-default" href="/EnergyMarkets/ForwardMarketAnalysis">Spot Price Simulation &raquo;</a>
+            </p>
+            @*  IN TODO:
+                <h3>Forward Curve Building</h3>
+            <p>
+                Building a Forward Curve basedon the available market data using a regression method that finds the 
+                lowest-cost dispatch to serve the net electricity demand. It also takes into account plant efficiency curves, 
+                start costs, different fuel types, plant availability, must-run obligations, and interconnections.
+            </p>
+            <p>
+                <a class="btn btn-default" href="/EnergyMarkets/ForwardMarketAnalysis">Forward Curve Building &raquo;</a>
+            </p>*@
+            <h3>Wind Park Valuation</h3>
+            <p>
+                A simulation model that calculates the value of a wind park assuming its power is sold partly via
+                a broker on the spot market.
+            </p>
+            <p>
+                <a class="btn btn-default" href="/EnergyMarkets/PowerPurchaseAgreement">Wind Park Valuation &raquo;</a>
+            </p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="panel-header">
+            <h2>Gas</h2>
+        </div>
+        <div class="panel">
+            <h3>Natural Gas Storage</h3>
+            <p>
+                Valuation of natural gas storage facilities based on an least squares monte carlo method. Notable is the ability 
+                to edit greeks values in real time, display dynamic values and so easily draw decisions... ... ...
+            </p>
+            <p>
+                <a class="btn btn-default" href="/GasMarket/StorageValuation">Storage Valuation &raquo;</a>
+            </p>
+            <h3>Forward Curve Simulation</h3>
+            <p>
+                An advanced model providing flexibility to simulation of the forward curve, in includes a dynamic term structure, underlying
+                model flexibility and a variety of nice features such as drag-and-drop interactions and a simple interface.
+            </p>
+            <p>
+                <a class="btn btn-default" href="/GasMarkets/ForwardCurves">Forward Curve Simulation... &raquo;</a>
+            </p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="panel-header">
+            <h2>Cross-commodities</h2>
+        </div>
+        <div class="panel">
+            <h3>Risk Management VaR</h3>
+            <p>
+                A comprehensive method for calulating VaR values based on flexible distribution settings and a hybrid
+                market model, providing high accuracy and extensive settings...
+            </p>
+            <p>
+                <a class="btn btn-default" href="/RiskManagement/PlantPortfolio">Plants VaR... &raquo;</a>
+            </p>
+            <h3>Virtual Power Plant</h3>
+            <p>
+                A simple demonstration of a virtual power plant using a multi-fuel that relies on real time data
+                and highly customizable parameters.
+            </p>
+            <p>
+                <a class="btn btn-default" href="/RiskManagement/PlantPortfolio">VPP &raquo;</a>
+            </p>
+        </div>
+    </div>
+</div>
+

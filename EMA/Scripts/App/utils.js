@@ -13,8 +13,79 @@ function clearSeriesContainingName(highchart, seriesName) {
     }
 }
 
-function addConfidenceBands(highchart, confidenceBands) {
+function addConfidenceBands(chart, dataObj, currentDates) {
+    clearSeriesContainingName(chart, "Confidence");
 
+    var confidences = dataObj.Confidence;
+    var confidenceBand = [];
+    var bandCount = confidences.length / 2;
+
+    //for future reference
+    var dt = undefined;
+
+    //add confidence values...
+    for (var i = 0; i < confidences.length; i++) {
+        var confidenceSerie = confidences[i];
+        var confidenceValues = [];
+
+        //first upper, then lower
+        for (var j = 0; j < confidenceSerie.length; j++) {
+            if (dt == undefined) {
+                var dVal = currentDates[j];
+            } else {
+                var dVal = dt + (j + 2) * TICKS_IN_HOUR;
+            }            
+
+            var cVal = confidenceSerie[j];
+
+            confidenceValues[j] = [dVal, cVal];
+
+            //start doing the bands when lower intervals are processed...
+            if (i >= bandCount) {
+                var subi = confidences.length - i - 1;
+                confidenceBand[subi][j] = [dVal, confidences[subi][j], cVal]
+            } else {
+                //initialize
+                confidenceBand[i] = [];
+            }
+        }
+
+        var serie = {
+            name: "Confidence " + ((i < bandCount) ? "Upper" : "Lower")
+                + prcFrmt(dataObj.ConfidenceLevels[i % bandCount]) + ' %',
+            color: "#FF0000",
+            type: 'line',
+            dashStyle: "ShortDot",
+            data: confidenceValues,
+            zIndex: 9,
+            enableMouseTracking: false
+        };
+
+        //don't add individual series for now...
+        //chart.addSeries(serie);
+    }
+
+    //starts from narrower to winder
+    for (var i = 0; i < bandCount; i++) {
+        /* Add confidence bands areas */
+        var cofidenceBandArea = {
+            name: 'Confidence Band ' + prcFrmt(dataObj.ConfidenceLevels[(bandCount - i - 1)]) + ' %',
+            data: confidenceBand[i],
+            type: 'arearange',
+            lineWidth: 0,
+            linkedTo: ':previous',
+            color: '#FF0000',
+            fillOpacity: 0.05 + (bandCount - i) * 0.05,
+            zIndex: (bandCount - i)
+        };
+
+        chart.addSeries(cofidenceBandArea);
+    }
+}
+
+/* Misccccs */
+function prcFrmt(prc) {
+    return (prc * 100).toFixed(2);
 }
 
 function objectPropertiesToObj() {

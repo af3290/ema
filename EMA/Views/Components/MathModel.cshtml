@@ -1,14 +1,15 @@
-﻿<h3>Model</h3>
-<p>
-    The naive model assumes only deterministic properties at the respective seasonal lags.
-    It is deterministic and has no optimized parameters.
-</p>
-<form class="form-horizontal" style="display:{{ forecastMethod == 'HWT' ? '' : 'none'}}">
-    <h3>Triple Seasonal Holt Winter's method</h3>
-    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
-                                        { "Id", "alpha" }, { "Label", "Alpha (%)" } });}
-    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
-                                        { "Id", "beta" }, { "Label", "Beta (%)" } });}
-    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
-                                        { "Id", "gamma" }, { "Label", "Gamma (%)" } });}
+﻿<h3 data-toggle="tooltip" data-placement="right" title="Editable values of the estimated forecasting model paramters">
+    Model Parameters
+</h3>
+@*TODO: add nesting...*@
+<form class="form-horizontal" ng-show="MathModel != null && Object.keys(MathModel).length != 0">
+    <div ng-repeat="(key, value) in MathModel" class="form-group">
+        <label for="input-{{key}}" class="control-label col-xs-6">{{key}}</label>
+        <div class="col-xs-6">
+            <input id="input-{{key}}" type="text" class="form-control"
+                   ng-model="MathModel[key]" value="{{value}}"
+                   ng-model-options="{ updateOn: 'blur'}"
+                   placeholder="1" style="width: 100px;">
+        </div>
+    </div>
 </form>
