@@ -68,7 +68,7 @@
         var data = [];
         for (var j = 0; j < forecast.length; j++) {
             //TODO: fix the +2 error, GMT? or why?
-            data[j] = [dt + (j + 2) * TICKS_IN_HOUR, forecast[j]];
+            data[j] = [dt + (j + GMT) * TICKS_IN_HOUR, forecast[j]];
         }
                 
         var serie = {
@@ -86,7 +86,7 @@
         var backcastData = [];
         for (var j = 0; j < backcast.length; j++) {
             //TODO: fix the +2 error, GMT? or why?
-            backcastData[j] = [dt + (j + 2 - backcast.length) * TICKS_IN_HOUR, backcast[j]];
+            backcastData[j] = [dt + (j + GMT - backcast.length) * TICKS_IN_HOUR, backcast[j]];
         }
 
         var backcastSerie = {
@@ -112,7 +112,7 @@
 
             //first upper, then lower
             for (var j = 0; j < confidenceSerie.length; j++) {
-                var dVal = dt + (j + 2) * TICKS_IN_HOUR;
+                var dVal = dt + (j + GMT) * TICKS_IN_HOUR;
                 var cVal = confidenceSerie[j];
 
                 confidenceValues[j] = [dVal, cVal];
@@ -161,12 +161,12 @@
         //todo: fix UTC...
         var startDate = new Date($scope.date);
         //Adjust for utc and include eventual backcasting
-        startDate.setTime(startDate.getTime() + (2 * 60 * 60 * 1000) - backcast.length * TICKS_IN_HOUR);
+        startDate.setTime(startDate.getTime() + (GMT * TICKS_IN_HOUR) - backcast.length * TICKS_IN_HOUR);
         var rangeStartDate = Date.parse(startDate);
 
         var endDate = new Date($scope.date);
         //Must show only until hour 23
-        endDate.setTime(endDate.getTime() + (1 * 60 * 60 * 1000) + dataObj.DaysAhead * 24 * TICKS_IN_HOUR);
+        endDate.setTime(endDate.getTime() + ((GMT-1) * TICKS_IN_HOUR) + dataObj.DaysAhead * 24 * TICKS_IN_HOUR);
         var rangeEndDate = Date.parse(endDate);
 
         chart.xAxis[0].setExtremes(rangeStartDate, rangeEndDate);

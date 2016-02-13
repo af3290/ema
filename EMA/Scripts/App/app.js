@@ -50,3 +50,6 @@ emaDemos.directive('datetimez', function () {
 TICKS_IN_DAY = 86400000;
 
 TICKS_IN_HOUR = 3600000;
+
+//correction for GMT thingy...
+GMT = (new Date()).getHours() - (new Date()).getUTCHours();
