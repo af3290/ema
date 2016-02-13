@@ -2,8 +2,23 @@
     $scope.volatility = 0.2;
     $scope.reversionRate = 25;
     $scope.confidence = 0.95;
-    $scope.simulationsCount = 0;
+    $scope.simulationsCount = 1;
     $scope.simulationSeries = [];
+
+    $scope.$http = $http;
+
+    $scope.postUrl = {
+        "Data": "/Prices/HistoricalSystemPrice?refresh=false&resolution=5",
+    };
+
+    $scope.onChangedPostResponse = { "Data": dataSuccess };
+
+    //prepare variables... put somewhere...
+    $scope.httpPostParameters = [];
+    $scope.objectWatchers = {};
+
+    registerParameter($scope, 'volatility', 0.2);
+    registerParameter($scope, 'forwardInterpolation', $scope.ForwardInterpolations[0], "Spikes");
 
     var chart = $('#container').highcharts('StockChart', {
         tooltip: {
@@ -23,6 +38,32 @@
         series: []
     });
 
+    var historicalStartDate, forwardEndDate;
+
+    function dataSuccess(data) {
+        var priceData = [];
+        for (var i = 0; i < data.length; i++) {
+            //try using linq.js => YES!
+            var dt = Date.parse(data[i].DateTime);
+            priceData[i] = [dt, data[i].Value];
+        }
+
+        var serie = {
+            name: "Historical Price",
+            color: '#CFCFCF',
+            data: priceData,
+            tooltip: {
+                valueDecimals: 4
+            },
+            zIndex: 9
+        };
+
+        chart.addSeries(serie);
+        
+        //doPageParametersPost($scope, "Forecast");
+        historicalStartDate = Date.parse(data[0].DateTime);
+    }
+
     //sorta global variables...
     window.chart = chart = $('#container').highcharts(); //
     window.forwardLevels = [];
@@ -38,9 +79,9 @@
 
             var price = fwd.FixPrice;
             var begin = Date.parse(fwd.Begin);
-            var end = Date.parse(fwd.End);
+            forwardEndDate = Date.parse(fwd.End);
             //this is daily, timeStep = 86400000
-            var diff = Math.ceil((end - begin) / 86400000);
+            var diff = Math.ceil((forwardEndDate - begin) / 86400000);
 
             var priceData = [];
             forwardLevels.push(price);
@@ -56,10 +97,11 @@
                 data: priceData
             };
 
-            chart.addSeries(serie);
-
-            chart.xAxis[0].setExtremes(priceData[0][0], priceData[priceData.length - 1][0]);
+            chart.addSeries(serie);            
         }
+
+        
+
         $("#container").trigger("ForwardContractsReady");
     });
 
@@ -78,7 +120,7 @@
                 var simulation = simulations[i];
                 var simulationData = [];
                 for (var j = 0; j < simulation.length; j++) {
-                    simulationData[j] = [startingDateForwardCurve + j * 86400000, simulation[j]];
+                    simulationData[j] = [startingDateForwardCurve + j * TICKS_IN_HOUR, simulation[j]];
                 }
                 
                 var serie = {
@@ -125,8 +167,12 @@
             alpha: newval
         };
 
-        function postSuccess(confidences) {
+        function postSuccess(confidencesObj) {
             clearSeriesContainingName(chart, "Confidence");
+
+            var confidences = confidencesObj.ConfidenceIntervals;
+            var fxxx = confidencesObj.ForwardInterpolation;
+
             for (var i = 0; i < confidences.length; i++) {
                 var confidenceSerie = confidences[i];
                 var confidenceValues = [];
@@ -144,6 +190,11 @@
 
                 chart.addSeries(serie);
             }
+
+            //should be in forwards... etc...
+            forwardEndDate = confidenceValues[confidenceValues.length - 1][0];
+
+            chart.xAxis[0].setExtremes(historicalStartDate, forwardEndDate);
         }
 
         $http.post('/Simulations/SpotPriceConfidence', data)
@@ -157,4 +208,7 @@
     $("#container").on("ForwardContractsReady", function () { confidenceChanged($scope.confidence) });
 
     $scope.$watch('confidence', confidenceChanged);
+
+    /* Start all */
+    doPageParametersPost($scope, "Data");
 });

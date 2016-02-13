@@ -75,20 +75,7 @@
                     @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
                                             { "Id", "confidence" }, { "Label", "Confidence (%)" } });}
                 </form>
-                <h3 data-toggle="tooltip" data-placement="right" title="Editable values of the estimated forecasting model paramters">
-                    Model Parameters
-                </h3>
-                <form class="form-horizontal" ng-show="MathModel != null && Object.keys(MathModel).length != 0">
-                    <div ng-repeat="(key, value) in MathModel" class="form-group">
-                        <label for="input-{{key}}" class="control-label col-xs-6">{{key}}</label>
-                        <div class="col-xs-6">
-                            <input id="input-{{key}}" type="text" class="form-control"
-                                   ng-model="MathModel[key]" value="{{value}}"
-                                   ng-model-options="{ updateOn: 'blur'}"
-                                   placeholder="1" style="width: 100px;">
-                        </div>
-                    </div>
-                </form>
+                @{Html.RenderPartial("~/Views/Components/MathModel.cshtml");}
             </div>
         </div>
         <div class="col-md-8">

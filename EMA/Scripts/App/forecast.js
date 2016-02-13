@@ -14,10 +14,13 @@
     $scope.httpPostParameters = [];
     $scope.objectWatchers = {};
 
-    registerParameter($scope, 'date', new Date(2015, 7, 3));
+    registerParameter($scope, 'date', new Date(2015, 1, 3));
+    //registerParameter($scope, 'date', new Date(2000, 3, 4));
+    //registerParameter($scope, 'dateMin', new Date(1999, 0, 1));
+    //registerParameter($scope, 'dateMax', new Date(2001, 0, 1));
     registerParameter($scope, 'forecastMethod', $scope.ForecastMethods[0]);
     registerParameter($scope, 'spikesPreprocessMethod', $scope.SpikesPreprocessMethods[0], "Spikes");
-    registerParameter($scope, 'spikesThreshold', 1.2, "Spikes");
+    registerParameter($scope, 'spikesThreshold', 1.5, "Spikes");
     registerParameter($scope, 'timeHorizon', $scope.TimeHorizons[0]);
     registerParameter($scope, 'confidence', 0.60);
     registerParameter($scope, 'exogenousVariables', {});
@@ -52,11 +55,6 @@
     });
 
     window.chart = chart = $('#container').highcharts();
-    
-    /* Private methods */
-    function prcFrmt(prc) {
-        return (prc*100).toFixed(2);
-    }
 
     function forecastSuccess(dataObj) {
         clearSeriesContainingName(chart, "Backcast");

@@ -1,33 +1,153 @@
-﻿@{
+﻿@using EMA.Helpers
+@using MarketModels;
+@{
     ViewBag.Title = "Forward Market";
 }
 
-<script src="~/Scripts/index.js"></script>
-<script src="~/Scripts/spot.js"></script>
+<script>
+    SERVER_CONSTANTS = {        
+        ForwardInterpolations: @(Html.EnumTypeToJavascript<Types.ForwardInterpolation>())
+    };
+</script>
+
+<script src="~/Scripts/electricitySpotSimulations.js"></script>
 
 <div ng-controller="SpotController">
     <div class="row">
         <div class="col-md-4">
-            <h2>Forward Interpolation</h2>
-            <p>We note here how our AMAZING forward curve is interpolated starting from the forward contracts.</p>
-            <p><a class="btn btn-default" href="http://go.microsoft.com/fwlink/?LinkId=301866">Algorithm &raquo;</a></p>
+            <div class="panel-header">
+                <h2><a data-toggle="modal" data-target="#demoDescription">Spot Price Simulations</a></h2>
+            </div>
+            <div class="panel">
+                <h3 data-toggle="tooltip" data-placement="right" title="Demo parameters">Parameters</h3>
+                <form class="form-horizontal">
+                    <div class="form-group">
+                        <label for="menu-sp" class="control-label col-xs-6">Forward Interpolation</label>
+                        <div class="col-xs-6">
+                            @{Html.RenderPartial("~/Views/Components/DropDownList.cshtml", null, new ViewDataDictionary(){
+                                  { "Id", "menu-sp" } , { "ModelName", "ForwardInterpolations" }, { "SelectedValue", "forwardInterpolation" },
+                                  { "Tooltip", "All spikes will be replaced by an interpolation method, shown on the chart, and will not affect the forecasted values."} });}
+                        </div>
+                    </div>
+                    @*@{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                            { "Id", "simulationsCount" }, { "Label", "Simulations" },
+                                            { "Tooltip", "Number of simulations to display."} });}*@
+                    @*@{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                            { "Id", "reversionRate" }, { "Label", "Reversion Rate" } });}*@
+                    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                            { "Id", "volatility" }, { "Label", "Volatility" } });}
+                    @{Html.RenderPartial("~/Views/Components/InputText.cshtml", null, new ViewDataDictionary(){
+                                            { "Id", "confidence" }, { "Label", "Confidence (%)" } });}
+                </form>
+                <button ng-click="simulate()">Simulate</button>
+                <button ng-click="clear()">Clar all</button>
+            </div>
         </div>
         <div class="col-md-8">
-            <h2>Interpolation</h2>
-            <p>here follows a graph...also how arbitrages... yes!</p>
-
-            <div id="container" style="height: 400px; min-width: 310px"></div>
-
-            <button type="button" class="btn btn-default" ng-click="simulate()">Simulate path</button>
-            <button type="button" class="btn btn-default" ng-click="clear()">Clear</button><br /><br />
-            Chart Properties<br />
-            <input type="text" ng-model="nbSims" placeholder="Simulations"><br />
-            <input type="text" ng-model="confidence" placeholder="Confidence"><br /><br />
-            Model Properties<br />
-            <input type="text" ng-model="volatility" placeholder="Volatility"><br />
-            <input type="text" ng-model="reversionRate" placeholder="Reversion Rate"><br />
-
+            <div class="panel-header">
+                <h2>Result</h2>
+            </div>
+            <div class="panel">
+                <div id="container" style="height: 400px; min-width: 310px"></div>
+            </div>
         </div>
     </div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="demoDescription" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h2 class="modal-title" id="myModalLabel">Price Forecasting Demo Description</h2>
+            </div>
+            <div class="modal-body">
+                <p>
+                    A simple forecasting demonstration of various common models for houly price. It provides the
+                    ability to forecast in the historical period, thereby allowing for an easy evaluation of a model, also shows the backcasting data.
+                    As well as point forecast, interval forecasts are calculated and other relevant statistics are shown (P Values, etc...).
+                    Very important to observe are the characterstics of electricity price, which are enumerated in the following image.
+                </p>
+                <img src="~/Content/Images/stylizedFactsAboutSystemPrice.png" style="width: 740px;" />
+                <h2>Forecast Methods</h2>
+                <p>
+                    Choice of methods is based on simplicity and conceptual accessibility. Those methods are adapted
+                    from research literature and presented for comparison purposes. Besides the naive method, all other support
+                    inclusion of exogenous varaibles. Also, the user is presented with model parameter estimates that can be changed.
+                </p>
+                <h3>1. Naive</h3>
+                <p>
+                    As a benchmarking method the naive approach has fundamental importance. It takes previous season's prices
+                    and averages them to compute the forecast. Previous day, previous week's today, previous month's today,
+                    previous year's today are included, the variation constitutes the basis for the construction of normally distributed
+                    prediction intervals.
+                    <div class="tex2jax_process" style="">
+                        $$ Y_{t+h} = Average(\{Y_{t-i}|i = 0, 24, 168, 672, 8760\}) $$
+                        $$ \text{h}\text{ is the forecast horizon. } $$
+                    </div>
+                </p>
+                <h3>2. Holt Winters</h3>
+                <p>
+                    Although more commonly used for demand variables, it's simple enough to be used here... it shows...
+                    <div class="tex2jax_process" style="">
+                    </div>
+                    Estimation is done using a bounded linear function optimizer that minimizes the associated
+                    RMSE within reasonable bounds.
+                </p>
+                <h3>3. Autoregressive Moving Average</h3>
+                <p>
+                    Full specification of a model looks like...
+                    The full version is...
+                    <div class="tex2jax_process" style="">
+                        $$ \phi(B)Y_t = \theta(B)ε_t+\sum_{i=1}^{N_{ex}}\beta_i(B)X_t^i $$
+                        $$ \text{Y}\text{ is the predicted variable. } $$
+                        $$ \text{X}\text{ is the exogenous predictor variables } $$
+                        $$ \text{N}_ex\text{ is the number of exogenous predictor variables } $$
+                        $$ \phi(B) = 1 - \sum_{i=1}^{p}\phi_iB^i \text{ is the backward lag operator. } $$
+                        $$ \theta(B) = 1 + \sum_{i=1}^{q}\theta_iB^i \text{ is the forward lag operator: } $$
+                    </div>
+                    The compact version is
+                    Esimation is done via OLS fitting
+                </p>
+                <h2>Multivariate regression</h2>
+                <p>Exogenous variables are included via linear regression</p>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p>
 
+                        </p>
+                    </div>
+                    <div class="col-md-8">
+                        <img src="~/Content/Images/curvesIntersection.png" style="width: 480px;" />
+                    </div>
+                </div>
+
+                <hr />
+
+                <h3>Limitations</h3>
+                1. Multiple regimes or heteroskedasticity concerns are ignored.<br />
+                2. Outages and other short term constraints are not included. <br />
+                3. Area prices and other relevant variables (such as flow constraints or exchange rates) are ignored. <br />
+                <hr />
+
+                <h3>References</h3>
+                [1] - Weron, R., Misiorek, A. Forecasting spot electricity prices: A comparison of
+                parametric and semiparametric time series models. International Journal of Forecasting. October
+                2008, Vol. 24.
+                <br />
+                [2] - Taylor, J.W. (2003) Short-term electricity demand forecasting using double seasonal exponential
+                smoothing, Journal of Operational Research Society 54, 799–805.
+                <br />
+                [3] - Winters, P. R. (April 1960) Forecasting Sales by Exponentially Weighted Moving Averages",
+                Management Science
+                <br />
+                [4] - Box, G. E. P., G. M. Jenkins, and G. C. Reinsel. Time Series
+                Analysis: Forecasting and Control. 3rd edition. Upper Saddle River,
+                NJ: Prentice-Hall, 1994.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
 </div>

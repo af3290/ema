@@ -84,6 +84,27 @@ namespace EMA.Misc
             return d;
         }
 
+        public static List<double> GetConsumption()
+        {
+            return GetHistoricalSeriesDaily("Consumption_Hourly_All.json")
+                                .Select(x => x.Value != null ? (double)x.Value : 0) //0 for now, when interpolation is done... etc..
+                                .ToList();
+        }
+
+        public static List<double> GetSystemPrice()
+        {
+            return GetHistoricalSeriesDaily("SystemPrice_Hourly_EUR.json")
+                                .Select(x => x.Value != null ? (double)x.Value : 0) //0 for now, when interpolation is done... etc..
+                                .ToList();
+        }
+
+        public static List<double> GetHistoricalSeriesDailyValues(string series)
+        {
+            return GetHistoricalSeriesDaily(series)
+                        .Select(x => x.Value != null ? (double)x.Value : 0) //0 for now, when interpolation is done... etc..
+                        .ToList();
+        }
+
         public static List<HistoricalPrice> GetHistoricalSeriesDaily(string series)
         {
             var d = GetHistoricalSeries(series);
