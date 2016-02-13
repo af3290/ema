@@ -2,11 +2,15 @@
 
 module MathFunctions =
     open System
-    open Operations
+    
+    open MathNet    
+    open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
     open MathNet.Numerics.Statistics
     open MathNet.Numerics.Distributions
     
+    open Operations
+
     ///Creates a matrix of length N filled with indicator values of shortPeriod length at each longPeriod 
     let IndicatorVariablesMatrix (N : int) (longPeriod : int) (shortPeriod : int) (periodIndices : int[]) : float[,] =
         let X = Array2D.zeroCreate N periodIndices.Length
@@ -27,8 +31,16 @@ module MathFunctions =
                 X.[fromIdx .. toIdx, i] <- ones;
 
         X
-    ///Shorthands for those long Array methods...
     
+    let sin (x : float) = Trig.Sin x
+    let cos (x : float) = Trig.Cos x
+    
+    let zeros (rows : int) (columns : int) : float[,] =
+        Array2D.init rows columns (fun i j -> 0.0)
+
+    let ones (rows : int) (columns : int) : float[,] =
+        Array2D.init rows columns (fun i j -> 1.0)
+
     ///Old boring arrays sum
     let sum (vec : float[]) : float =
         vec |> Array.sum
@@ -45,13 +57,14 @@ module MathFunctions =
         let jIdx j = if onRows then j else M - j - 1
         Array2D.init N M (fun i j -> mat.[iIdx i, jIdx j])
 
-    ///Retrieves a new array formed by all the values after the specified index row... 
+    ///Retrieves a new array formed by all the values after and including the specified index row.
     let afterRows2D (vec : float[,]) (index : int) : float[,] =
         vec.[index..vec.GetLength(0) - 1, *]
 
     let firstRows2D (mat : float[,]) (n : int) : float[,] =
         mat.[0..n - 1, *]
 
+    ///Returns the last n rows
     let lastRows2D (mat : float[,]) (n : int) : float[,] =
         mat.[mat.GetLength(0) - n..mat.GetLength(0) - 1, *]
 
@@ -89,6 +102,10 @@ module MathFunctions =
     ///Old boring mean...
     let mean (vec : float[]) : float =
         Statistics.Mean vec
+
+    ///Old boring variance...
+    let var (vec : float[]) : float =
+        Statistics.Variance vec
 
     ///Sample standard deviation
     let stdev (vec : float[]) : float =
@@ -290,7 +307,7 @@ module MathFunctions =
         let filteredSeries = MovAvg series lag  
         
         //squared residuals of the first moving average
-        let residuals = (series -- filteredSeries) ^^ 2.0
+        let residuals = (series .- filteredSeries) ^^ 2.0
         
         //filter residuals again
         let result = MovAvg residuals lag

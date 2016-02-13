@@ -76,3 +76,22 @@ module Optimization =
         alglib.minbleicresults(state, &values, &rep);
         
         values
+
+    let ConstrainedMultivariateWithGradient (funcParams : float[]) (funcParamsBounds : float[,]) (gradFunc : alglib.ndimensional_grad) : float[] =
+        let funcNbParams = funcParams.Length
+        
+        //initial parameters values, updated with the optimal values afterwards
+        let mutable values = Array.init funcNbParams (fun i -> funcParams.[i])
+        let mutable state : alglib.minbleicstate = null
+        let mutable rep : alglib.minbleicreport = null
+        
+        let bndl = funcParamsBounds.[0, *]
+        let bndu = funcParamsBounds.[1, *]
+
+        alglib.minbleiccreate(values, &state)
+        alglib.minbleicsetbc(state, bndl, bndu)
+        alglib.minbleicsetcond(state, 0.0000000001, 0.0, 0.0, 0);
+        alglib.minbleicoptimize(state, gradFunc, null, null);
+        alglib.minbleicresults(state, &values, &rep);
+        
+        values
