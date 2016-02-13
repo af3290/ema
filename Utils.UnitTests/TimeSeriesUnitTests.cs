@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MarketModels;
 using static MarketModels.Tests.TimeSeriesTests;
+using MarketModels.Tests;
 
 namespace Utils.UnitTests
 {
@@ -81,10 +82,20 @@ namespace Utils.UnitTests
         [TestMethod]
         public void ARMA()
         {
+            //var mrxx = new EstimationTests.EstimationUnitTests();
+            //mrxx.MLE_Test1();
+
             var ts = new MarketModels.Tests.TimeSeriesTests.TimeSeriesUnitTests();
+            ts.ARMASimulateModel();
             //ts.ARMAInferResidualsOfSpecifiedModel();
             //ts.TestFloatingPointErrorsVsMatlab();
             //ts.FilterTest2();
+            var sp = new StochasticProcessesTests.StochasticProcessesUnitTests();
+            //sp.OUEst();
+            
+            //var sts = new SimulationsTests.TimeSeriesUnitTests();
+            
+            //sts.PPATest();
 
             //ts.ARMATest1();
             //ts.OptimTest1();

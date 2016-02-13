@@ -39,9 +39,9 @@ module SimulationsTests =
 
             //to daily
             let dy = Array.init nDays (fun i -> yyy.[24*i..24*i+23] |> mean)
-            let ppa = new PowerPurchasingAgreement()
+            let ppa = new PowerPurchasingAgreement(10.0, 0.025, 0.02)
             
             //ppa.InterestRate <- 0.025
-            ppa.Evaluate dy 20 0.95
+//            ppa.Evaluate dy 20 0.95
 
             Assert.AreEqual(0, 0)
