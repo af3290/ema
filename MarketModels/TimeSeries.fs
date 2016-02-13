@@ -19,6 +19,16 @@ module TimeSeries =
     open Optimization
     open Forecast
 
+    let toStationary (series : float[]) : float[] =
+        let Xs = Array.init series.Length (fun i -> (float)i)
+        let ab = Fit.Line(Xs, series)
+        let a = fst ab
+        let b = snd ab
+        let trend = Xs |> Array.map (fun x -> a*x + b)
+        let ymean = mean series
+        let detrendedSeries = Array.map2 (fun y ytrend -> y - ytrend + ymean) series trend
+        series
+
     ///Add presamples data, and XXX... Helper method, from matlab.. uses column vectors...
     let checkPresampleData(outputMatrix : float[,]) (intputMat : float[,]) (nRows : int) : float[,] =
         let rows = (outputMatrix.GetLength 0)
@@ -54,7 +64,7 @@ module TimeSeries =
         MA : LagOp; 
         Const : float; 
         Var: float;
-        [<DefaultValue>] mutable Rand: int -> int -> float[][]; 
+        [<DefaultValue>] mutable Rand: int -> int -> float[][]
         //TODO: merge with ARXMA or ARMAX model..
     } with 
         ///Evaluates the model on a time series by calculating next step values/residuals, alike to matlabs parts.
@@ -128,6 +138,8 @@ module TimeSeries =
             //mmmh???
             let Y = Array2D.init simulations T (fun i j -> if j < maxDegree then y0.[j, 0] else 0.0)
 
+            let x = new Double.DenseMatrix(simulations, horizon)
+            
             let randoms = this.Rand simulations horizon
             
             //add 0 MA lag...???
@@ -214,7 +226,7 @@ module TimeSeries =
             //no need for stationarity test, since no state...
         
         let bCoeffs = Array.init (AR.Length + 1) (fun i -> if i = 0 then 1.0 else -AR.[i-1])        
-        let filteredSeries = Filter1D bCoeffs [|1.0|] series   
+        let filteredSeries = Filter1D1 bCoeffs series   
 
         //variance of the filtered series now...     
         Const <- filteredSeries |> Array.average
@@ -307,7 +319,17 @@ module TimeSeries =
         }
 
         let res = ARMA series ar ma
-        res.Rand <- StochasticProcesses.getStandardNormalSampleMatrix
+        res.Rand <- StochasticProcesses.getStandardNormalSampleMatrixSimple
+        res
+
+    let ARMASimple3 (ar : LagOp) (ma : LagOp) (constant : float) (variance : float) : ARMAResult = 
+        let res = {
+            AR = ar;
+            MA = ma;
+            Const = constant;
+            Var = variance
+        }
+        res.Rand <- StochasticProcesses.getStandardNormalSampleMatrixSimple
         res
 
     //TODO: switch to object oriented...? maybe...
