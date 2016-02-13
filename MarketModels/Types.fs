@@ -6,6 +6,12 @@ module Types =
     open System.Collections
     open Microsoft.FSharp.Reflection
 
+    //Measures for future integration...
+    [<Measure>] type Eur
+    [<Measure>] type MWh
+    [<Measure>] type Hour
+    [<Measure>] type Day
+
     type EquilibriumAlgorithm = CurveIntersection | WelfareMaximization
 
     type EquilibriumFill = Demand | Supply | Middle //also used for how the curves are drawn
@@ -24,6 +30,8 @@ module Types =
     let DAY_BASE_HOURS = [seq { 0..5 }; seq { 11..15 }; seq { 21..23 }] |> Seq.concat |> Seq.toArray
 
     let PI = Math.PI
+
+    let Inf = Double.PositiveInfinity
 
     let GetTimeHorizonValue (ithTimeHorizon:int) = 
         match ithTimeHorizon with

@@ -1,5 +1,6 @@
 ﻿namespace MarketModels
 
+///Hold common object for time series problmes
 module TimeSeries =
     //TODO: port from matlab... yes, awesome...
     open System
@@ -14,8 +15,31 @@ module TimeSeries =
     
     open Operations
     open MathFunctions    
+    open StochasticProcesses
     open Optimization
     open Forecast
+
+    ///Add presamples data, and XXX... Helper method, from matlab.. uses column vectors...
+    let checkPresampleData(outputMatrix : float[,]) (intputMat : float[,]) (nRows : int) : float[,] =
+        let rows = (outputMatrix.GetLength 0)
+        let columns = (outputMatrix.GetLength 1)
+
+        //TODO: add checks...        
+
+        //Reformat presample
+        let localInputMat = lastRows2D intputMat nRows
+        
+        //If the user-specified input presample array is a single column vector, replicate it across all columns 
+        if (localInputMat.GetLength 1) = 1 then
+            for i in 0..columns - 1 do
+                outputMatrix.[(rows-nRows)..(rows-1), i] <- localInputMat.[*, 0]
+        else
+            //assume same number of columns...
+            for i in 0..columns - 1 do
+                outputMatrix.[(rows-nRows)..(rows-1), i] <- localInputMat.[*, i]
+
+        outputMatrix
+
 
     ///Convention: missing lags are fixed at 0, not missing with 0s are to be optimized...
     type LagOp = {
@@ -29,33 +53,37 @@ module TimeSeries =
         AR : LagOp; 
         MA : LagOp; 
         Const : float; 
-        Var: float
+        Var: float;
+        [<DefaultValue>] mutable Rand: int -> int -> float[][]; 
         //TODO: merge with ARXMA or ARMAX model..
     } with 
         ///Evaluates the model on a time series by calculating next step values/residuals, alike to matlabs parts.
         ///Returns for first maxDegree 0s
-        member this.Evaluate (Y : float[]) (isOnResiduals : bool) : float[] = 
+        member this.EvaluateWithResidualsAndLagOps (Y : float[]) (E : float[]) (ar : LagOp) (ma : LagOp) (isOnResiduals : bool) : float[] = 
 
-            let maxDegree = max this.AR.Degree this.MA.Degree
+            let maxDegree = max ar.Degree ma.Degree
 
             if Y.Length < maxDegree then
                 failwith "Not enough observations"
-            
-            let E = Array.zeroCreate Y.Length
                         
+            let E = if(E.Length = 0) then Array.zeroCreate Y.Length else E
+                        
+            if Y.Length <> E.Length then
+                failwith "When passing residuals, lengths must agree"
+
             //when calculating residuals must subtract the constant
             let coeffsSign = if isOnResiduals then -1.0 else 1.0
 
             //on residuals must include self 0 AR
-            let arLags = if isOnResiduals then Array.concat [| [|0|]; this.AR.Lags|] else this.AR.Lags
-            let arCoeffs = if isOnResiduals then  Array.concat [| [|-1.0|]; this.AR.Coefficients|] else this.AR.Coefficients
+            let arLags = if isOnResiduals then Array.concat [| [|0|]; ar.Lags|] else ar.Lags
+            let arCoeffs = if isOnResiduals then  Array.concat [| [|-1.0|]; ar.Coefficients|] else ar.Coefficients
 
-            let coeffs = Array.concat [|[|this.Const * coeffsSign|]; arCoeffs .*. coeffsSign; this.MA.Coefficients .*. coeffsSign|]
+            let coeffs = Array.concat [|[|this.Const * coeffsSign|]; arCoeffs .*. coeffsSign; ma.Coefficients .*. coeffsSign|]
         
             for i in maxDegree..Y.Length-1 do
                 //revert indices from lag form to array indices, for example [|1; 2; 24|] to [|23; 22; 0|]
                 let arIdx = Array.rev ((Array.rev arLags) |> Array.map (fun x -> - x + i))
-                let maIdx = Array.rev ((Array.rev this.MA.Lags) |> Array.map (fun x -> - x + i))
+                let maIdx = Array.rev ((Array.rev ma.Lags) |> Array.map (fun x -> - x + i))
             
                 //get the values at the specified indices
                 let data = Array.concat [| [|1.0|]; sub Y arIdx; sub E maIdx |]
@@ -72,6 +100,55 @@ module TimeSeries =
                 E
             else
                 Y
+        
+        ///Another shorthand...
+        member this.EvaluateWithResiduals (Y : float[]) (E : float[]) (isOnResiduals : bool) : float[] = 
+            this.EvaluateWithResidualsAndLagOps Y E this.AR this.MA isOnResiduals
+
+        ///Shorthand method...
+        member this.Evaluate (Y : float[]) (isOnResiduals : bool) : float[] = 
+            this.EvaluateWithResiduals Y [||] isOnResiduals
+
+        ///Simple simulation routine of an ARMA fit...
+        ///simulations - numPaths
+        member this.Simulate (simulations : int) (horizon : int) (Y0 : float[]) (E0 : float[]) : float[,] =         
+            
+            let maxDegree = max this.AR.Degree this.MA.Degree
+            let T = horizon + maxDegree
+
+            //presample E0
+            let inE0 = array2D (JaggedArray.transpose [|E0|])
+            let e0 = checkPresampleData (zeros maxDegree simulations) inE0 this.MA.Degree
+            //mmmh???
+            let E = Array2D.init simulations T (fun i j -> if j < maxDegree then e0.[j, 0] else 0.0)
+            
+            //presample Y0
+            let inY0 = array2D (JaggedArray.transpose [|Y0|])
+            let y0 = checkPresampleData (ones maxDegree simulations) inY0 this.AR.Degree
+            //mmmh???
+            let Y = Array2D.init simulations T (fun i j -> if j < maxDegree then y0.[j, 0] else 0.0)
+
+            let randoms = this.Rand simulations horizon
+            
+            //add 0 MA lag...???
+            let ma = {
+                Lags = Array.concat [|[|0|]; this.MA.Lags|]
+                Coefficients = Array.concat [|[|1.0|]; this.MA.Coefficients|]
+            }
+
+            let simRes = Array.init simulations (fun i -> 
+                //exclude the presample estimation and scale to process variance
+                let randomPath = Array.concat [| E.[i, 0..maxDegree-1]; randoms.[i] .*. sqrt this.Var |]
+                
+                //evaluate path on itself
+                let simulatedPath = this.EvaluateWithResidualsAndLagOps Y.[i,*] randomPath this.AR ma false
+
+                //return after presample
+                after simulatedPath maxDegree
+            )
+
+            //Consider returning the errors as well... 
+            array2D simRes
 
         ///Caluates gaussian NLogLikelihood
         member this.LogLikelihood (Y : float[]) : float =
@@ -92,7 +169,6 @@ module TimeSeries =
         let mutable AR = Array.init p (fun i -> 0.0)
         let mutable MA = Array.init q (fun i -> 0.0)
         let mutable Const = 0.0
-        let mutable Var = 0.0
 
         //local calculation variables
         let mutable C = Array2D.init p p (fun i j -> 0.0)
@@ -169,7 +245,7 @@ module TimeSeries =
             let fixedMAsLags = Set.ofArray(Array.init (ma.Degree) (fun i -> i + 1)) - Set.ofArray(ma.Lags) |> Set.toArray               
               
             //MA minimize change variance until a significant fit is found
-            while (L2Norm (MA -- MA1) > tol && counter < 100) do
+            while (L2Norm (MA .- MA1) > tol && counter < 100) do
                 //put data in previous state to check norm change...
                 MA |> Array.iteri (fun i x -> MA1.[i] <- x)
 
@@ -201,7 +277,7 @@ module TimeSeries =
                 AR = ar;
                 MA = ma;
                 Const = Const;
-                Var = Var
+                Var = var
             }
 
     ///Shortcut method to avoid using LagOps, initializes LagOps with all 1..p and q...
@@ -230,7 +306,9 @@ module TimeSeries =
             Lags = q
         }
 
-        ARMA series ar ma
+        let res = ARMA series ar ma
+        res.Rand <- StochasticProcesses.getStandardNormalSampleMatrix
+        res
 
     //TODO: switch to object oriented...? maybe...
     
@@ -293,12 +371,6 @@ module TimeSeries =
         //eliminate presample, which was just used for initialization
         Array.sub E maxDegree series.Length
 
-    ///Simple simulation routine of an ARMA fit...
-    let Simulate (series : float[]) (arma : ARMAResult) (nbSimulations : int) : float[,] = 
-        ///etc...
-        array2D [||]
-
-
     type ARXModel = {
         AR : LagOp;
         //Betas of the predictors data given by X
@@ -344,7 +416,7 @@ module TimeSeries =
         let bbb = ConstrainedLinearLeastSquares C d Aeq beq
         
         //already exclude the initial maxDegree presample
-        let residuals = y -- xMat.Multiply(DenseVector.OfArray(bbb)).ToArray()
+        let residuals = y .- xMat.Multiply(DenseVector.OfArray(bbb)).ToArray()
 
         //assign output betas
         //yet SAR are excluded... 
@@ -367,7 +439,7 @@ module TimeSeries =
         //The moving average part
         MA : LagOp;
     } with
-               ///Evaluates the model on a time series by calculating next step values/residuals, alike to matlabs parts.
+        ///Evaluates the model on a time series by calculating next step values/residuals, alike to matlabs parts.
         ///Returns for first maxDegree 0s
         member this.Evaluate (Y : float[]) (X : float[,]) (isOnResiduals : bool) : float[] = 
 
@@ -480,6 +552,10 @@ module TimeSeries =
             let E = this.Evaluate Y fX true
             
             after E maxDegree
+
+        member this.Simulate (series : float[]) (X : float[,])  : float[] =    
+
+            series
 
     ///estimates ARXMA model with exogenous variables calling the previous ARX model
     ///Y - nbObservations 
