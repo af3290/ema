@@ -2,24 +2,23 @@
 
 module Electricity = 
     open System
-    open Types
-    open MathFunctions
-    open StochasticProcesses
-    open Operations
-    open Optimization
-    open Forecast
-    open Simulations
-    open Estimation
-    open MathNet
-    open MathNet.Numerics.Statistics
+    
+    open MathNet    
     open MathNet.Numerics
+    open MathNet.Numerics.Statistics
     open MathNet.Numerics.Interpolation
     open MathNet.Numerics.Distributions
     open MathNet.Numerics.LinearAlgebra
     open MathNet.Numerics.LinearAlgebra.Double
 
-    let sin (x : float) = Trig.Sin x
-    let cos (x : float) = Trig.Cos x
+    open Operations
+    open Types
+    open MathFunctions
+    open StochasticProcesses    
+    open Optimization
+    open Forecast
+    open Simulations
+    open Estimation
 
     (* PPA Demo, daily data *)
     
@@ -45,7 +44,7 @@ module Electricity =
 
         let optimFunc : alglib.ndimensional_func = new alglib.ndimensional_func(fun x funcRes obj -> 
             let result = Array.init n (fun t -> gt ((float)t) x.[0] x.[1] x.[2] x.[3] x.[4])
-            funcRes <- RMSE (series -- result) series
+            funcRes <- RMSE (series .- result) series
         )
 
         let initialParams = [|0.1; 0.1; 0.1; 0.1; 0.1|]
@@ -54,6 +53,8 @@ module Electricity =
         let ub = Array.init 5 (fun i -> +100.0) 
         let bounds = array2D [|lb; ub|]
 
+        //use linear least squares insted of multivariate...
+        
         let foundParams = ConstrainedMultivariateWithBounds initialParams bounds optimFunc
 
         foundParams
@@ -72,7 +73,7 @@ module Electricity =
 
         let optimFunc : alglib.ndimensional_func = new alglib.ndimensional_func(fun x funcRes obj -> 
             let result = series |> Array.mapi (fun t st -> SigSt ((float)t/365.0) x.[0] x.[1])
-            funcRes <- RMSE (series -- result) series
+            funcRes <- RMSE (series .- result) series
         )
 
         let initialParams = [|0.1; 0.1;|]
@@ -212,7 +213,7 @@ module Electricity =
             //estimate deterministic price, it makes too much of an impact to do it... really?...
             let dps = [|0.062; 0.013; 0.009; 0.012; -0.031|] //Estimate_St series
             seasParams <- dps
-            let residuals = series -- Array.init n (fun t -> gt ((float)t) dps.[0] dps.[1] dps.[2] dps.[3] dps.[4])
+            let residuals = series .- Array.init n (fun t -> gt ((float)t) dps.[0] dps.[1] dps.[2] dps.[3] dps.[4])
 
             //estimate deterministic volatility
             sigParams <- Estimate_SigSt residuals
@@ -243,3 +244,70 @@ module Electricity =
 
         member this.EvaluateAsOption (seriesX : float[]) (horizon : int) (confidence : float) = 
             seriesX
+
+        
+    ///Holds a Mean-Reversion with Jumps model with a maximum 1 jump per day, matlab demo...
+    ///etc...
+    type MeanReversionWithJumpsDemo(X : float[], zzz : float) =
+        let Pt = after X 1
+        let Pt_1 = before X (X.Length - 1)
+        let dt = 1.0 / 365.0
+        
+        [<DefaultValue>] val mutable alpha : float
+        [<DefaultValue>] val mutable kappa : float
+        [<DefaultValue>] val mutable mu_J : float
+        [<DefaultValue>] val mutable sigma : float
+        [<DefaultValue>] val mutable sigma_J : float
+        [<DefaultValue>] val mutable lambda : float
+
+        //just KK
+        [<DefaultValue>] val mutable allParams : float[]
+
+        ///keeps matlab order
+        member this.MLEEstimationPDF  
+            (a : float) 
+            //Jumps Parameters
+            (phi : float) (mu_J : float)  (sigmaSq : float) 
+            //Mean-Reversion Parameter
+            (sigmaSq_J : float) (lambda : float) : float[] =
+                        
+            let pdf pt pt_1 =
+                //Jumps Component 
+                let jumpSig = 2.0 * (sigmaSq+sigmaSq_J)
+                let jump = -((pt - a - phi * pt_1 - mu_J) ** 2.0) / jumpSig                
+                let jumpTerm = (exp jump) * (1.0 / sqrt(jumpSig * PI))
+                                
+                //Mean Reversion Component
+                let meanReversionSig = 2.0 * sigmaSq
+                let meanReversion = -((pt - a - phi * pt_1) ** 2.0) / meanReversionSig
+                let meanReversionTerm = (exp meanReversion) * (1.0 / sqrt(meanReversionSig * PI))                                
+
+                lambda * jumpTerm + (1.0 - lambda) * meanReversionTerm
+
+            //notice that it relies on the type parameter
+            let result = Array.map2 pdf Pt Pt_1 
+            
+            result
+
+        member this.EstimateModel() =
+            let x0 = [|0.0; 0.0; 0.0; var X; var X; 0.5|];
+
+            let lb = [|-Inf; -Inf; -Inf; 0.001; 0.001; 0.001|];
+            let ub = [|Inf; 1.0; Inf; Inf; Inf; 1.0|];
+
+            let pdfFunc (x : float[]) = this.MLEEstimationPDF x.[0] x.[1] x.[2] x.[3] x.[4] x.[5]
+
+            let optimized = MLE Pt x0 lb ub pdfFunc
+
+            this.allParams <- optimized
+
+            //model parameters
+            this.alpha <- optimized.[0]/dt
+            this.kappa <- optimized.[1]/dt
+            this.mu_J <- optimized.[2]
+            this.sigma <- sqrt(optimized.[3]/dt)
+            this.sigma_J <- sqrt(optimized.[4])
+            this.lambda <- optimized.[5]/dt           
+
+        member this.Simulate() =
+            ()
