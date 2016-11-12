@@ -14,7 +14,7 @@ namespace Utils.NordPoolSpot
     {
         public const string MarketCurvesBaseUrl = @"http://www.nordpoolspot.com/globalassets/download-center-market-data/";
         public const string BaseUrl = @"http://www.nordpoolspot.com/globalassets/marketdata-excel-files/";
-        public const string SavePath = @"D:\Projects\XXIc\EMA\Data\";
+        public const string SavePath = @"D:\Projects\GitHub\ema\EMA\App_Data\";
 
         //for equlibrium prices: http://nordpoolspot.com/Market-data1/Elspot/Area-Prices/ALL1/Hourly/?view=table
         //var url = @"http://www.nordpoolspot.com/globalassets/download-center-market-data/mcp_data_report_{0}-00_00_00.xls";

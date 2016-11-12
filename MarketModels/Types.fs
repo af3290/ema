@@ -20,6 +20,8 @@ module Types =
 
     type ForecastMethod = Naive | HoltWinters | ARMA
 
+    type ForwardInterpolation = CubicSpline | Sines | Polynomial
+
     type Resolution = Yearly | Quarterly | Monthly | Weekly | Daily | Hourly
 
     type TimeHorizon = DayAhead | WeekAhead | MonthAhead

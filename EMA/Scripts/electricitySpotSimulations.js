@@ -8,7 +8,7 @@
     $scope.$http = $http;
 
     $scope.postUrl = {
-        "Data": "/Prices/HistoricalSystemPrice?refresh=false&resolution=5",
+        "Data": "/Prices/HistoricalSystemPrice?refresh=false&resolution=5&timeSeries=JPX",
     };
 
     $scope.onChangedPostResponse = { "Data": dataSuccess };
@@ -45,7 +45,9 @@
         for (var i = 0; i < data.length; i++) {
             //try using linq.js => YES!
             var dt = Date.parse(data[i].DateTime);
-            priceData[i] = [dt, data[i].Value];
+            var value = data[i].Value;
+            priceData[i] = [dt, value];
+            lastP = value;
         }
 
         var serie = {
@@ -62,6 +64,9 @@
         
         //doPageParametersPost($scope, "Forecast");
         historicalStartDate = Date.parse(data[0].DateTime);
+
+        //after historical follows the forward curve...
+        getForwardCurve();
     }
 
     //sorta global variables...
@@ -69,42 +74,52 @@
     window.forwardLevels = [];
     window.timeSteps = [];
     window.startingDateForwardCurve;
+
     var timeStep = 0; //hourly, daily, monthly, quarterly, yearly... 
 
-    $.getJSON('/Prices/ForwardCurve?region=nordic&nonOverlapping=true', function (data) {
-        startingDateForwardCurve = Date.parse(data[0].Begin);
+    var lastP = 0; //last historical price 
+    var firstF = 0; //first forward price
 
-        for (var i = 0; i < data.length; i++) {
-            var fwd = data[i];
+    function getForwardCurve() {
+        $.getJSON('/Prices/ForwardCurve?region=nordic&nonOverlapping=true', function (data) {
+            startingDateForwardCurve = Date.parse(data[0].Begin);
+            firstF = data[0].LastPrice;
 
-            var price = fwd.FixPrice;
-            var begin = Date.parse(fwd.Begin);
-            forwardEndDate = Date.parse(fwd.End);
-            //this is daily, timeStep = 86400000
-            var diff = Math.ceil((forwardEndDate - begin) / 86400000);
+            for (var i = 0; i < data.length; i++) {
+                var fwd = data[i];
 
-            var priceData = [];
-            forwardLevels.push(price);
-            timeSteps.push(diff + 1);
+                var price = fwd.LastPrice;
 
-            //we must replicate the price daily, so the server won't have that high of a burden
-            for (var j = 0; j <= diff; j++) {
-                priceData[j] = [begin + j * 86400000, price];
+                //adjust the forward curve artificially at the last historical price level...
+                price = price - firstF + lastP;
+
+                var begin = Date.parse(fwd.Begin);
+                forwardEndDate = Date.parse(fwd.End);
+
+                var diff = Math.ceil((forwardEndDate - begin) / TICKS_IN_DAY);
+
+                var priceData = [];
+                forwardLevels.push(price);
+                timeSteps.push(diff + 1);
+
+                //we must replicate the price daily, so the server won't have that high of a burden
+                for (var j = 0; j <= diff; j++) {
+                    priceData[j] = [begin + j * TICKS_IN_DAY, price];
+                }
+
+                var serie = {
+                    name: fwd.Contract,
+                    data: priceData
+                };
+
+                chart.addSeries(serie);            
             }
-
-            var serie = {
-                name: fwd.Contract,
-                data: priceData
-            };
-
-            chart.addSeries(serie);            
-        }
 
         
 
-        $("#container").trigger("ForwardContractsReady");
-    });
-
+            $("#container").trigger("ForwardContractsReady");
+        });
+    }
     $scope.simulate = function() {
         var data = {
             timeStepsInLevels: timeSteps,
@@ -125,9 +140,12 @@
                 
                 var serie = {
                     name: "Simulated Path " + ($scope.simulationsCount++),
-                    color: "#FF0000",
-                    dashStyle: "ShortDot",
-                    data: simulationData
+                    color: "#0000FF",
+                    //dashStyle: "ShortDot",
+                    dashStyle: "LongDash",
+                    lineWidth: 0.75,
+                    data: simulationData,
+
                 };
 
                 chart.addSeries(serie);
@@ -171,13 +189,12 @@
             clearSeriesContainingName(chart, "Confidence");
 
             var confidences = confidencesObj.ConfidenceIntervals;
-            var fxxx = confidencesObj.ForwardInterpolation;
-
+            
             for (var i = 0; i < confidences.length; i++) {
                 var confidenceSerie = confidences[i];
                 var confidenceValues = [];
                 for (var j = 0; j < confidenceSerie.length; j++) {
-                    confidenceValues[j] = [startingDateForwardCurve + j * 86400000, confidenceSerie[j]];
+                    confidenceValues[j] = [startingDateForwardCurve + j * TICKS_IN_DAY, confidenceSerie[j]];
                 }
 
                 var serie = {
@@ -191,10 +208,29 @@
                 chart.addSeries(serie);
             }
 
+            var interpolation = confidencesObj.ForwardInterpolation;
+
+            var vals = [];
+            for (var j = 0; j < interpolation.length; j++) {
+                vals[j] = [startingDateForwardCurve + j * TICKS_IN_HOUR, interpolation[j]];
+            }
+
+            var serie = {
+                name: "Forward Interpolation",
+                color: "#000000",
+                type: 'spline',
+                dashStyle: "LongDash",
+                lineWidth: 1.25,
+                data: vals
+            };
+
+            chart.addSeries(serie);
+
             //should be in forwards... etc...
             forwardEndDate = confidenceValues[confidenceValues.length - 1][0];
 
-            chart.xAxis[0].setExtremes(historicalStartDate, forwardEndDate);
+            //historicalStartDate
+            chart.xAxis[0].setExtremes(startingDateForwardCurve, forwardEndDate);
         }
 
         $http.post('/Simulations/SpotPriceConfidence', data)

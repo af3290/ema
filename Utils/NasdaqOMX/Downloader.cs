@@ -44,6 +44,9 @@ namespace Utils.NasdaqOMX
             var forwardContracts = enos.Select(x => new ForwardContract()
             {
                 Contract = x.Id.Replace("derivatesNordicTable-NOP", ""),
+                Bid = GetFromTD(x, "bp").TryCastToDecimal(),
+                Ask = GetFromTD(x, "ap").TryCastToDecimal(),
+                Volume = GetFromTD(x, "onexv").TryCastToDecimal(),
                 LastPrice = GetFromTD(x, "lsp").TryCastToDecimal(),
                 FixPrice = GetFromTD(x, "stlpr").TryCastToDecimal()
             }).ToList();

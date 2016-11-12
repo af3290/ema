@@ -164,6 +164,7 @@ module TimeSeries =
 
         ///Caluates gaussian NLogLikelihood
         member this.LogLikelihood (Y : float[]) : float =
+            
             //in TODO:
             0.0
 

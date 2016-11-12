@@ -15,7 +15,7 @@
 
     $('#hour-chart').highcharts({
         chart: {
-            width: 750,
+            width: 700,
             height: 480,
             zoomType: 'xy'
         },
@@ -56,7 +56,7 @@
 
     $('#profile-chart').highcharts({
         chart: {
-            width: 750,
+            width: 700,
             height: 480,
             zoomType: 'xy'
         },
@@ -108,7 +108,7 @@
             blockUI.stop();
         });
 
-        $('[data-toggle="tooltip"]').tooltip();
+        
     });
 
     $scope.changeDropDownValue = function (dropDownModelName, newValue) {
@@ -227,7 +227,7 @@
             .Select("x => [x.Hour, x.Equilibrium.Price + x.Sensitivity.PriceDelta" + side + "PlusPrc]")
             .ToArray();
         profileChart.addSeries({
-            name: "Sensitivity " + side + " - " + prc + "x%",
+            name: "Sensitivity " + side + " - " + prc + "%",
             data: sdminus,
             color: "#CFCFCF",
             dashStyle: "ShortDash",

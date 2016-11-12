@@ -15,6 +15,9 @@ namespace EMA.Controllers
     {
         public ActionResult Index()
         {
+            //var xxxx = new Class1();
+            //xxxx.GetXX();
+
             //tests here fow now...
 
             //var np = new NordicPrices();
@@ -44,5 +47,7 @@ namespace EMA.Controllers
         {
             return View();
         }
+
+        //TODO: make an ETF arbitrage from Algos by Chen! YEAH!
     }
 }

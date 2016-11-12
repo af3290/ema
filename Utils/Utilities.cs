@@ -55,6 +55,25 @@ namespace Utils
             }
         }
 
+        public static TimeSpan TryCastToTime(this string str)
+        {
+            DateTime dt;
+            //TODO: there s a big problem here!!!
+            var formats = new string[] { "H:mm tt", "HH:mm tt", "HH:mm" };
+            if (DateTime.TryParseExact(str, formats, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None, out dt))
+                return dt.TimeOfDay;
+
+            try
+            {
+                dt = DateTime.Parse(str);
+                return dt.TimeOfDay;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
         public static decimal TryCastToDecimal(this string dec)
         {
             if(!string.IsNullOrEmpty(dec))
@@ -65,6 +84,16 @@ namespace Utils
             return res;
         }
 
+        public static double TryCastToDouble(this string dec)
+        {
+            if (!string.IsNullOrEmpty(dec))
+                dec = dec.Replace(",", ".");
+
+            double res = double.NaN;
+            Double.TryParse(dec, out res);
+            return res;
+        }
+        
         public static string StatkraftTableTotalProduction(this HtmlNode n)
         {
             return n.ChildNodes

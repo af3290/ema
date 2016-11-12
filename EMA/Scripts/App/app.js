@@ -53,3 +53,15 @@ TICKS_IN_HOUR = 3600000;
 
 //correction for GMT thingy...
 GMT = (new Date()).getHours() - (new Date()).getUTCHours();
+
+emaDemos.controller('ArbsController', function ($scope, $http) {
+    
+    function getForwardCurve() {
+        $.getJSON('/EnergyMarkets/ArbVals', function (data) {
+            $scope.Arbitrages = data;
+            $scope.$apply();
+        });
+    }
+
+    getForwardCurve();
+});

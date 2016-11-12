@@ -9,6 +9,15 @@ namespace NordicPricesAPI.UnitTests
     public class PricesControllerUnitTests
     {
         [TestMethod]
+        public void SpikesTest()
+        {
+            var xx = new PricesController();
+            var res = xx.EstimateSpikes("", "SimilarDay", 1.4);
+
+            Assert.IsNotNull(res);
+        }
+
+        [TestMethod]
         public void Simulations()
         {
             var xx = new SimulationsController();
@@ -17,6 +26,7 @@ namespace NordicPricesAPI.UnitTests
 
             Assert.IsNotNull(fcs);
         }
+
         [TestMethod]
         public void HistoricalSystemPriceTest()
         {

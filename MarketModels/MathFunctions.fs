@@ -159,6 +159,35 @@ module MathFunctions =
 
         filteredSeries
 
+    //TODO: test this filter...
+    ///Simpler version of above, assume a = [|1.0|], therefore it has only the x component:
+    ///y(n) = b(1)*x(n) + b(2)*x(n-1) + ... + b(nb+1)*x(n-nb) which can be written
+    ///... b(nb+1)...b(1)... etc...
+    let Filter1D1 (b : float[]) (series : float[]) =
+        if b.Length = 0 || series.Length = 0 then
+            failwith "Can't do"
+
+        let nb = b.Length
+
+        //pre revert to match, so we don't revert Xs... faster
+        let revb = Array.rev b
+
+        //include current index or not?? not for starters...
+        let filteredSeries = Array.init series.Length (fun index ->
+            match index with
+            //3 cases
+            |i when i >= nb -> 
+                revb .* Array.sub series (i - nb) nb |> sum
+            //intermediary, can't get the full b coeffs, revert and match to last most recent b coeffs
+            |i when i > 0 -> 
+                let lastBs = after b (nb-i)
+                let lastXs = Array.sub series 0 i
+                (Array.rev lastBs) .* lastXs |> sum
+            |0 -> series.[0]
+        )
+        
+        filteredSeries
+
     ///Teoplitz matrix initialization, like in matlab
     let TeoplitzInit (column : float[]) (row : float[]) : float[,] =
         if column.Length <> row.Length then 

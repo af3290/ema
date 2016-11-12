@@ -2,6 +2,7 @@
 
 module StochasticProcesses = 
     open System
+
     open MathNet.Numerics.Distributions
     open MathNet.Numerics.LinearAlgebra
     open MathNet.Numerics.LinearAlgebra.Double
@@ -10,7 +11,18 @@ module StochasticProcesses =
     open MathNet.Numerics.LinearAlgebra.DenseMatrix
     open MathNet.Numerics.LinearAlgebra.Factorization
     
+    open MathFunctions
+    open Types
+
     //TODO: all should use MathNet.Numerics.Matrix and related types... yes...
+
+    let getStandardNormalSampleMatrixSimple (rows : int) (cols : int) = 
+        let dist = new Normal()        
+        dist.RandomSource.Next() |> ignore
+        let matarr = Array.zeroCreate<float> (rows*cols)
+        dist.Samples(matarr)
+        let resultMatrix = Array.init rows (fun i -> Array.init cols (fun j -> matarr.[i*(cols+1)+j]))
+        resultMatrix
 
     let getStandardNormalSampleMatrix (rows : int) (cols : int) = 
         let dist = new Normal()        
@@ -44,6 +56,30 @@ module StochasticProcesses =
 
         correlatedSimulations
 
+    // Function that simulates and correlates the simulations by use of the cholesky functions
+    let multiNormalZeroMeanConfidences (covarianceMatrix : float[,]) (alpha : float) =
+        //TODO: refactor...
+        let dist = new Normal()
+
+        // Generating the standard normal samples
+        let upper =  Array.create (covarianceMatrix.GetLength 1) (dist.InverseCumulativeDistribution alpha) 
+        let lower = upper |> Array.map (fun x -> - x) 
+        let simulations =  JaggedArray.transpose [|upper;lower|]
+        
+        let simulationMatrix = DenseMatrix.init (covarianceMatrix.GetLength 1) 2 (fun i j -> simulations.[i].[j])
+        
+        // Creating the lower triangular cholesky decomposition of the covariance matrix
+        let choleskyMatrix = covarianceMatrix |> choleskyFactorization 
+
+        // Multiplying the matrices choleskyMatrix and simulationsMatrix to get a Matrix of correlated standard normals. 
+        let correlatedSimulations = choleskyMatrix.Multiply simulationMatrix
+
+        correlatedSimulations
+
+//    type Poisson() = class
+//        member val Lambda = 0.0 with get, set
+//    end
+        
     ///An OU Step 
     type OU = {
         lambda: float; 

@@ -3,12 +3,16 @@
 module Preprocess =
     open System
     open System.Collections.Generic
+
+    open MathNet.Numerics
+    open MathNet.Numerics.Distributions
+
     open Types
-    open Forecast
-    open TimeSeries
     open MathFunctions
     open Operations
-    open MathNet.Numerics
+    open StochasticProcesses
+    open Forecast
+    open TimeSeries
 
     let IsStrictlyIncreasing (series : int[]) : bool =
         //If all numbers are bigger their previouses, without equals
@@ -41,7 +45,7 @@ module Preprocess =
         
         let movavg = MovAvg series lag
 
-        (series -- movavg) .+. mean series
+        (series .- movavg) .+. mean series
 
     ///Returns the indices where spikes are determined based on moving standard deviation at given lags and confidence level
     let EstimateSpikesOnMovSDs (series : float[]) (longLag : int) (shortLag : int) (alpha : float) : int[] = 
@@ -154,3 +158,50 @@ module Preprocess =
             )
         | SpikePreprocess.None -> series
         | SpikePreprocess.Limited -> series   
+    
+    ///Return spikes values of singular spikes within a day...
+    let GetSingularSpikes (series : float[]) (spikeIndices : int[]) (sp : SpikePreprocess) (alpha : float) : float[] = 
+        if spikeIndices.Length < 2 then
+            Array.empty
+        else
+        if not (IsStrictlyIncreasing spikeIndices) then
+            failwith "Spike indices not in order"
+
+        //shortHands
+        let len = (spikeIndices.Length - 2)
+        let sIs = spikeIndices
+
+        //find indices with no neighbours within same day
+        let singularSpikesInDay = Array.init len (fun i -> 
+            let todaysStart = 24 * (sIs.[i] / 24)
+            let todaysEnd = 24 * (sIs.[i] / 24) + 23
+            //first case
+            if i = 0 then 
+                if todaysEnd < sIs.[i+1] then sIs.[i] else -1 
+            else
+            //last case
+            if i = len - 1 then 
+                if sIs.[i - 1] < todaysStart then sIs.[i] else - 1
+            else
+            //middle elements
+            if sIs.[i - 1] < todaysStart && todaysEnd < sIs.[i + 1] then 
+                sIs.[i]
+            else 
+                -1)
+
+        //eliminate previous week too... since that's needed for similar day method
+        let singularSpikesInDayIndices = singularSpikesInDay |> Array.filter (fun i -> i > 168)
+
+        Array.init (singularSpikesInDayIndices.Length) (fun i -> series.[singularSpikesInDayIndices.[i]])
+
+    ///One daily data, only at peak hours... yeah...
+    let EstimateSpikesDistribution(series : float[]) (spikeIndices : int[]) (sp : SpikePreprocess) (alpha : float) : (Normal * Poisson) =        
+        
+        let spikes = Array.init (spikeIndices.Length) (fun i -> series.[spikeIndices.[i]])
+        
+        let spikesDistrib = Distributions.Normal.Estimate(spikes)
+        
+        //per dt...
+        let poisson = new Distributions.Poisson(((float)spikeIndices.Length)/((float)series.Length))
+                
+        (spikesDistrib, poisson)

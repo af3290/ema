@@ -68,7 +68,7 @@ module HoltWinters =
         //then fill the extra with some re estimated data...
 
         //logged residuals
-        let eps = data.[0..data.Length-1]  -- y.[0..data.Length-1] 
+        let eps = data.[0..data.Length-1]  .- y.[0..data.Length-1] 
         
         //confidence alpha...
         let alphaBounds = ConfidenceAlphaBounds alpha

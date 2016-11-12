@@ -105,7 +105,7 @@ module Forecast =
 
     ///Shorthand version from given
     let RMSE (forecasted : float[]) (realized : float[]) : float = 
-        let residuals = realized -- forecasted
+        let residuals = realized .- forecasted
         let sqErrs = residuals ^^ 2.0
 
         sqrt(sqErrs|>Array.average)
@@ -124,12 +124,12 @@ module Forecast =
     ///Calculates are relevant forecast fitting statistics: absolute errors, % errors, residual IID tests
     ///and R square...
     let ForecastFit (forecasted : float[]) (realized : float[]) : FitStatistics =
-        let residuals = realized -- forecasted
+        let residuals = realized .- forecasted
         let ressd = Statistics.StandardDeviation residuals
         let resm = Statistics.Mean residuals
 
         //return % value
-        let prcErrs = residuals./realized |> Array.map (fun x -> abs 100.0*x)
+        let prcErrs = residuals./realized |> Array.map (fun x -> abs(100.0*x))
         let sqErrs = residuals ^^ 2.0
         
         let mutable normalityPValue = 0.0
@@ -153,7 +153,7 @@ module Forecast =
         let autocorr = SeriesAutocorrelation residuals autocorrLen
         
         let res = {
-            Bias = forecasted -- realized |> Array.average;
+            Bias = forecasted .- realized |> Array.average;
             RSquared = MathNet.Numerics.GoodnessOfFit.RSquared(realized, forecasted)
             IndependencePValue = autocorr |> Array.max;
             NormalityPValue = normalityPValue;

@@ -1,0 +1,104 @@
+﻿@using EMA.Helpers
+@using MarketModels;
+@{
+    ViewBag.Title = "Forward Market";
+}
+
+<style>
+.navbar, footer {display:none;}
+</style>
+
+<script>
+    SERVER_CONSTANTS = {        
+        ForwardInterpolations: @(Html.EnumTypeToJavascript<Types.ForwardInterpolation>())
+    };
+</script>
+
+<script src="~/Scripts/electricitySpotSimulations.js"></script>
+
+<div ng-controller="ArbsController">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel-header">
+                <h2><a data-toggle="modal" data-target="#demoDescription">Forward Arbitrages</a></h2>
+            </div>
+            <div class="panel">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <td>
+                                Pair
+                            </td>
+                            <td>
+                                Direction
+                            </td>
+                            <td>
+                                Leg 1
+                            </td>
+                            <td>
+                                Leg 2
+                            </td>
+                            <td>
+                                PnL
+                            </td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="li in Arbitrages" role="presentation">
+                            <td>
+                                {{li.Pair}}
+                            </td>
+                            <td>
+                                {{li.Direction}}
+                            </td>
+                            <td>
+                                {{li.Leg1 | number: 2}} EUR
+                            </td>
+                            <td>
+                                {{li.Leg2 | number: 2}} EUR
+                            </td>
+                            <td>
+                                {{li.PnL | number: 2}} EUR
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="demoDescription" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h2 class="modal-title" id="myModalLabel">Price Forecasting Demo Description</h2>
+            </div>
+            <div class="modal-body">
+                <p>
+                    A simple demonstration of various approaches for houly spot price simulations. It provides the
+                    ability to select the interpolation method and various other relevant parameters.
+                </p>
+
+                <h2>Forward Interpolation</h2>
+                <p>
+                    Arbitrage...:
+                    <div class="tex2jax_process" style="">
+                        $$ H_m*F_{m,T_m,T_{n}} = \sum_{i=m+1}^{n-1}H_i*F_{i, T_i, T_{i+1}} $$
+                        $$ \text{F_{m,T_m,T_{n}}}\text{ is the m-th contract overlapping the contained contracts. } $$
+                        $$ \text{F_{i, T_i, T_{i+1}}}\text{ is contained i-th contract underlapping the m-th contract. } $$
+                        $$ \text{H_i}\text{ is the hourly duration of the i-th contract. } $$
+                    </div>
+                      
+                </p>
+                
+                <h2>Limitations</h2>
+                xxx...                
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

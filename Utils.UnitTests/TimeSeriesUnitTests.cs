@@ -86,6 +86,7 @@ namespace Utils.UnitTests
             //mrxx.MLE_Test1();
 
             var ts = new MarketModels.Tests.TimeSeriesTests.TimeSeriesUnitTests();
+            ts.FilterTest1D1();
             ts.ARMASimulateModel();
             //ts.ARMAInferResidualsOfSpecifiedModel();
             //ts.TestFloatingPointErrorsVsMatlab();

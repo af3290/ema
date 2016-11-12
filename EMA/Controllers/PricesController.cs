@@ -19,7 +19,9 @@ namespace EMA.Controllers
     public class PricesController : Controller
     {
         /* Nordpoolspot */
-        private string _timeSeries = "SystemPrice_Hourly_EUR.json";
+        public static string _timeSeries = "SystemPrice_Hourly_EUR.json";
+        //figure out a way to change it as runtime, yeah... with an URL parameter...
+        //public static string _timeSeries = "JPX_Price_Hourly.json";
         private string _exVarsPre = @"";
 
         /* Weron California prices... */
@@ -34,11 +36,21 @@ namespace EMA.Controllers
             return Json(fc, JsonRequestBehavior.AllowGet);
         }
 
-        public JsonResult HistoricalSystemPrice(bool refresh, string resolution)
+        public JsonResult HistoricalSystemPrice(bool refresh, string resolution, string timeSeries)
         {
+            //until the rest is updated... don't use it
+            //if(timeSeries == "JPX")
+            //{
+            //    var h = AppData.GetHistoricalSeries("JPX_Price_Hourly.json");
+            //    return Json(h, JsonRequestBehavior.AllowGet);
+            //}
+
             if (resolution == "5")//because of bullshit F# types... dummy for now... fix later
             {
+                //TODO: fix here... add more demos, yeah!
                 var h = AppData.GetHistoricalSeries(_timeSeries);
+                var off = h.Count(p => p.Value < 0 || p.Value > 500);
+                var nans = h.Count(p => !p.Value.HasValue);
                 return Json(h, JsonRequestBehavior.AllowGet);
             }
 
@@ -120,7 +132,7 @@ namespace EMA.Controllers
 
                 //Then perform the spike estimation 
                 var spikeIndices = EstimateSpikesOnMovSDs(desezonalizedData, 24, 2, spikesThreshold);
-                                
+                
                 for (int i = 0; i < spikeIndices.Length; i++)
                 {
                     var p = d[spikeIndices[i]];

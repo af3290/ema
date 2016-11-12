@@ -6,23 +6,7 @@
    
     $scope.Currency = "€";
 
-    var chart = $('#container-var').highcharts({
-        chart: {          
-            type: 'column'
-        },
-        tooltip: {
-            valueDecimals: 4
-        },
-        title: {
-            text: 'VaR'
-        },
-        series: [],
-        xAxis: {
-            
-            minPadding: 0,
-            maxPadding: 0
-        }
-    });
+    
 
     window.chart = chart = $('#container-var').highcharts();
 
@@ -45,42 +29,7 @@
     }
 
     function loadHistoricalData() {
-        var priceData = [];
-        for (var i = 0; i < 100; i++) {
-            priceData[i] = -i*(i-99);
-        }
-
-        var serie = {
-            name: "Cash Flow",
-            color: '#CFCFCF',
-            data: priceData,
-            tooltip: {
-                valueDecimals: 4
-            }
-        };
-
-        chart.addSeries(serie);
-
-        //VaR lines..
-        chart.xAxis[0].addPlotLine({
-            color: 'red', // Color value
-            value: 3, // Value of where the line will appear
-            width: 2 // Width of the line
-        });
-
-        chart.xAxis[0].addPlotLine({
-            label: {
-                text: "90% VaR",
-                verticalAlign: 'top',
-                textAlign: 'center'
-            },
-            color: 'yellow', // Color value
-            value: 10, // Value of where the line will appear
-            width: 2 // Width of the line
-        });
-
-        //add different colors, make it work really nice
-        //YES, make it cool...
+        
     }
 
     function varChanged(newval, oldval) {

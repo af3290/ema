@@ -29,6 +29,7 @@ module Simulations =
         (int)(Math.Floor value)
         
     //TODO: fix it, it's wrong...
+    //YES; fix the shit out of this method...
     let dailyLongTermMean (daysInEachMonthArray : int[]) (priceCurve : float[]) = 
         let numOfMonths = priceCurve.Length
         let totalNumOfDays = daysInEachMonthArray |> Array.sum
@@ -64,6 +65,38 @@ module Simulations =
         )
 
         array2D lifted
+
+    ///Spikes simulation based on a posisson process with the parameters passed in... yeah...
+    ///Series - on which it places the spikes
+    ///horizon in number of days
+    let spikeSimulations (horizon : int) (poisson : Poisson) (normal : Normal) : (int[] * float[]) = 
+        
+        //Poisson is arrival rate in events per year, rescale
+        let years = (float)horizon / 365.0
+        let poiss = new Poisson(poisson.Lambda * years)
+        
+        let spikeCount = poiss.Sample()
+        let spikeIndicies = Array.zeroCreate<int> spikeCount
+        let spikeValues = Array.zeroCreate<float> spikeCount
+
+        //assume uniformly distributed through the horizon...
+        DiscreteUniform(0, horizon).Samples(spikeIndicies)
+        Array.Sort spikeIndicies
+
+        normal.Samples(spikeValues);
+
+        (spikeIndicies, spikeValues)
+        
+    //Test..
+    let spikeSimulationsReplace (simulations: float[,]) (poisson : Poisson) (normal : Normal) : float[,] = 
+        let nSeries = simulations.GetLength 0
+        let horzion = simulations.GetLength 1
+        
+        for i in 0..nSeries-1 do
+            let spikes = spikeSimulations horzion poisson normal
+            Array.iter2 (fun j value -> simulations.[i, j] <- value) (fst spikes) (snd spikes)
+
+        simulations
 
     //TODO: change to daysInEachMonthArray to timeSteps (e.g. days in months or hours in months... etc...)
     let spotPriceSimulations (daysInEachMonthArray : int[]) (numOfSimulations : int) (priceCurve : float[]) (deltaT : float) (reversionRate : float) (sigma : float) = 
@@ -205,7 +238,16 @@ module Simulations =
         //TODO: revise..
         JaggedArray.transpose (curveSimulationsConfidence priceCurve corrs alpha timeHorizonDeltaT)
 
+    ///Returns a simulated forward levels path of specified lengths at the provided
+    ///time of year (as fraction), which determines its seasonality.
+    let simulateForwardLevels (forwardLengths : int[]) (t0 : float): float[] =
+        let n = forwardLengths.Length
 
+        //use the deterministic seasonality function...
+
+        //add the random component now... etc...
+
+        Array.init n (fun i -> 0.0)
 
 
 

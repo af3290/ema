@@ -311,3 +311,10 @@ module Electricity =
 
         member this.Simulate() =
             ()
+
+    type ElectricityForwardInterpolator() =
+        [<DefaultValue>] val mutable alpha : float
+        
+        member this.Interpolate() =
+            
+            ()

@@ -44,7 +44,7 @@
         var data = [];
         for (var j = 0; j < forecast.length; j++) {
             //TODO: fix the +2 error, GMT? or why?
-            data[j] = [dt + (j + 2) * 3600000, forecast[j]];
+            data[j] = [dt + (j + 2) * TICKS_IN_HOUR, forecast[j]];
         }
 
         var serie = {
@@ -62,7 +62,7 @@
             var confidenceSerie = confidences[i];
             var confidenceValues = [];
             for (var j = 0; j < confidenceSerie.length; j++) {
-                confidenceValues[j] = [dt + (j + 2) * 3600000, confidenceSerie[j]];
+                confidenceValues[j] = [dt + (j + 2) * TICKS_IN_HOUR, confidenceSerie[j]];
             }
 
             var serie = {
